@@ -1,0 +1,31 @@
+Saturday schedule generated from data/sourcedSchedules/weekend/example.json
+
+
+## breakfast from 10:00 to 10:01
+[WALK] <dining_room> (41)
+[WALK] <food_bread> (1081)
+## breakfast from 10:42 to 10:43
+[FIND] <food_bread> (1081)
+[GRAB] <food_bread> (1081)
+[FIND] <chef_knife> (1031)
+[GRAB] <chef_knife> (1031)
+## breakfast from 11:50 to 11:51
+[FIND] <food_bread> (1081)
+[DROP] <food_bread> (1081)
+[CUT] <food_bread> (1081)
+[FIND] <chef_knife> (1031)
+[DROP] <chef_knife> (1031)
+[EAT] <food_bread> (1081)
+## breakfast from 12:32 to 12:32
+[FIND] <food_bread> (1081)
+[GRAB] <food_bread> (1081)
+[WALK] <kitchen_counter> (119)
+[PUTBACK] <food_bread> (1081) <kitchen_counter> (119)
+## breakfast from 12:45 to 12:47
+[WALK] <chef_knife> (1031)
+[FIND] <chef_knife> (1031)
+[GRAB] <chef_knife> (1031)
+[WALK] <faucet> (121)
+[RINSE] <chef_knife> (1031)
+[WALK] <kitchen_counter> (119)
+[PUTBACK] <chef_knife> (1031) <kitchen_counter> (119)
