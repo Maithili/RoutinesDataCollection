@@ -141,6 +141,7 @@ class GraphReader():
                     ne = e.copy()
                     ne.update({"from_id":self.new_obj_id, "from_class":obj})
                     self.graph_dict['edges'].append(ne)
+        self.usable_nodes_by_room['dining_room'][obj] = self.new_obj_id
         self.new_obj_id += 1
     
     def write(self, filename):
