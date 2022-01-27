@@ -95,33 +95,29 @@ def execute_program(program_file, graph_file, node_map):
     name_equivalence = utils.load_name_equivalence()
     graphs = [init_graph.to_dict()]
     print('Checking scripts...',end='')
-    for script in action_scripts:
-        executor = ScriptExecutor(EnvironmentGraph(graphs[-1]), name_equivalence)
-        success, state, graph_list = executor.execute(Script(script), w_graph_list=True)
-        if not success:
-            error_str = executor.info.get_error_string()
-            location_info = ''
-            if 'inside other closed thing' in error_str:
-                try:
-                    object = error_str[error_str.index('<')+1:error_str.index('>')]
-                    location_info = f'{object} is inside {object_locations[object]}'
-                except:
-                    pass
-            script_string = '\n  - '.join([str(l) for l in script])
-            raise RuntimeError(f'Execution of the following script failed because {executor.info.get_error_string()} \n  - {script_string} \n\n {location_info}')
-        graphs.append(state.to_dict())
-        # print([str(l) for l in script])
-        # print_graph_difference(graphs[-2],graphs[-1])
-        # input('Press something...')
+    # for script in action_scripts:
+    #     executor = ScriptExecutor(EnvironmentGraph(graphs[-1]), name_equivalence)
+    #     success, state, graph_list = executor.execute(Script(script), w_graph_list=True)
+    #     if not success:
+    #         error_str = executor.info.get_error_string()
+    #         location_info = ''
+    #         if 'inside other closed thing' in error_str:
+    #             try:
+    #                 object = error_str[error_str.index('<')+1:error_str.index('>')]
+    #                 location_info = f'{object} is inside {object_locations[object]}'
+    #             except:
+    #                 pass
+    #         script_string = '\n  - '.join([str(l) for l in script])
+    #         raise RuntimeError(f'Execution of the following script failed because {executor.info.get_error_string()} \n  - {script_string} \n\n {location_info}')
+    #     graphs.append(state.to_dict())
+    #     # print([str(l) for l in script])
+    #     # print_graph_difference(graphs[-2],graphs[-1])
+    #     # input('Press something...')
     
-    print("Script segments OK")
+
     executor = ScriptExecutor(EnvironmentGraph(graphs[-1]), name_equivalence)
-    print('Checking final state...',end='')
-    executor.check_final_state()
-    print('Final state OK\n')
     try:
-        print('Trying a second run...',end='')
-        success, _, _ = executor.execute(Script(whole_program), w_graph_list=True)
+        success, state, _ = executor.execute(Script(whole_program), w_graph_list=True)
         if not success:
             error_str = executor.info.get_error_string()
             if 'inside other closed thing' in error_str:
@@ -129,6 +125,11 @@ def execute_program(program_file, graph_file, node_map):
                 print(f'{object} is inside {object_locations[object]}')
             raise RuntimeError(f'Execution failed because {error_str}')
         print("Execution successful!!")
+        print('Checking final state...',end='')
+        executor = ScriptExecutor(EnvironmentGraph(state.to_dict()), name_equivalence)
+        executor.check_final_state()
+        print('Final state OK\n')
     except Exception as e: print (e)
+
 
     return action_headers, graphs
