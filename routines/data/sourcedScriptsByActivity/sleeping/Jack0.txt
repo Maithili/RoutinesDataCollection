@@ -3,7 +3,6 @@
 [Walk] <alarm_clock>
 [Find] <alarm_clock>
 [Switchoff] <alarm_clock>
--<alarm_clock>
 
 ## 1-2
 [Walk] <curtain_bedroom>
