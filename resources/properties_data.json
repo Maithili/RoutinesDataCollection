@@ -1423,7 +1423,8 @@
         "MOVABLE"
     ],
     "shower": [
-        "HAS_SWITCH"],
+        "HAS_SWITCH"
+    ],
     "shredder": [
         "HAS_SWITCH",
         "CONTAINERS",

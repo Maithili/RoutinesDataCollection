@@ -1,0 +1,13 @@
+{"showering": [[6, 7], [18, 19]], 
+"brushing_teeth": [[6, 7]], 
+"getting_out_of_bed": [[6, 7]], 
+"taking_medication": [[6, 7]], 
+"breakfast": [[7, 8]], 
+"getting_dressed": [[7, 8]], 
+"going_to_the_bathroom": [[7, 8], [9, 10], [11, 12], [15, 17], [20, 22], [23, 24]], 
+"computer_work": [[8, 12], [13, 18]], 
+"lunch": [[12, 13]], 
+"take_out_trash": [[18, 19]], 
+"watching_tv": [[18, 23]], 
+"dinner": [[19, 20]], 
+"sleeping": [[23, 24]]}
