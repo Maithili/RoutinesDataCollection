@@ -19,21 +19,34 @@ def print_graph_difference(g1,g2):
     edges_added = [e for e in g2['edges'] if e not in g1['edges']]
     nodes_removed = [n for n in g1['nodes'] if n['id'] not in [n2['id'] for n2 in g2['nodes']]]
     nodes_added = [n for n in g2['nodes'] if n['id'] not in [n2['id'] for n2 in g1['nodes']]]
+    ignore_for_edges = ['character','wall']
 
     for n in nodes_removed:
         print ('Removed node : ',n)
     for n in nodes_added:
         print ('Added node   : ',n)
+    remaining_objects = []
     for e in edges_removed:
         c1 = class_from_id(g1,e['from_id'])
         c2 = class_from_id(g1,e['to_id'])
-        if c1 != 'character' and c2 != 'character' and e['relation_type'] in ['INSIDE','ON']:
-            print ('Removed edge : ',c1,e['relation_type'],c2)
+        if c1 not in ignore_for_edges and c2 not in ignore_for_edges and e['relation_type'] in ['INSIDE','ON']:
+            print (' - ',c1,e['relation_type'],c2)
+            remaining_objects.append(e['from_id'])
     for e in edges_added:
         c1 = class_from_id(g2,e['from_id'])
         c2 = class_from_id(g2,e['to_id'])
-        if c1 != 'character' and c2 != 'character' and e['relation_type'] in ['INSIDE','ON']:
-            print ('Added edge   : ',c1,e['relation_type'],c2)
+        if c1 not in ignore_for_edges and c2 not in ignore_for_edges and e['relation_type'] in ['INSIDE','ON']:
+            print (' + ',c1,e['relation_type'],c2)
+            if e['from_id'] in remaining_objects:
+                remaining_objects.remove(e['from_id'])
+    for id in remaining_objects:
+        for e in g2['edges']:
+            if e['from_id'] == id and e['relation_type'] in ['INSIDE','ON']:
+                c2 = class_from_id(g2,e['to_id'])
+                if c2 not in ignore_for_edges:
+                    c1 = class_from_id(g2,e['from_id'])
+                    print (' + ',c1,e['relation_type'],c2)
+
 
 def read_program(file_name, node_map):
     action_headers = []
@@ -88,48 +101,45 @@ def read_program(file_name, node_map):
         action_scripts = action_scripts[1:]
     return action_headers, action_scripts, object_use, full_program
 
-def execute_program(program_file, graph_file, node_map):
+def execute_program(program_file, graph_file, node_map, verbose=False):
     with open (graph_file,'r') as f:
-        init_graph = EnvironmentGraph(json.load(f))
+        init_graph_dict = json.load(f)
+    init_graph = EnvironmentGraph(init_graph_dict)
     action_headers, action_scripts, action_obj_use, whole_program = read_program(program_file, node_map)
     name_equivalence = utils.load_name_equivalence()
     graphs = [init_graph.to_dict()]
+
     print('Checking scripts...',end='')
-    # for script in action_scripts:
-    #     executor = ScriptExecutor(EnvironmentGraph(graphs[-1]), name_equivalence)
-    #     success, state, graph_list = executor.execute(Script(script), w_graph_list=True)
-    #     if not success:
-    #         error_str = executor.info.get_error_string()
-    #         location_info = ''
-    #         if 'inside other closed thing' in error_str:
-    #             try:
-    #                 object = error_str[error_str.index('<')+1:error_str.index('>')]
-    #                 location_info = f'{object} is inside {object_locations[object]}'
-    #             except:
-    #                 pass
-    #         script_string = '\n  - '.join([str(l) for l in script])
-    #         raise RuntimeError(f'Execution of the following script failed because {executor.info.get_error_string()} \n  - {script_string} \n\n {location_info}')
-    #     graphs.append(state.to_dict())
-    #     # print([str(l) for l in script])
-    #     # print_graph_difference(graphs[-2],graphs[-1])
-    #     # input('Press something...')
-    
-
+    save_graph = [0]
+    for a in action_scripts:
+        save_graph.append(save_graph[-1] + len(a))
     executor = ScriptExecutor(EnvironmentGraph(graphs[-1]), name_equivalence)
-    try:
-        success, state, _ = executor.execute(Script(whole_program), w_graph_list=True)
-        if not success:
-            error_str = executor.info.get_error_string()
-            if 'inside other closed thing' in error_str:
-                object = error_str[error_str.index('<')+1:error_str.index('>')]
-                print(f'{object} is inside {object_locations[object]}')
-            raise RuntimeError(f'Execution failed because {error_str}')
-        print("Execution successful!!")
-        print('Checking final state...',end='')
-        executor = ScriptExecutor(EnvironmentGraph(state.to_dict()), name_equivalence)
-        executor.check_final_state()
-        print('Final state OK\n')
-    except Exception as e: print (e)
+    success, state, graph_list = executor.execute(Script(whole_program), w_graph_list=True)
+    # graph_list = [init_graph_dict] + graph_list[1:]
+    print('exec info ---- ')
+    print(executor.info.get_error_string())
+    if not success:
+        error_str = executor.info.get_error_string()
+        if 'inside other closed thing' in error_str:
+            object = error_str[error_str.index('<')+1:error_str.index('>')]
+            print(f'{object} is inside {object_locations[object]}')
+        raise RuntimeError(f'Execution failed because {error_str}')
+    print('Execution successful!!')
 
+    print('Checking final state...',end='')
+    executor = ScriptExecutor(EnvironmentGraph(state.to_dict()), name_equivalence)
+    executor.check_final_state()
+    print('Final state OK\n')
 
-    return action_headers, graphs
+    assert len(save_graph)-1 == len(action_scripts)
+    if verbose:
+        print('This is how the scene changes after every set of actions...')
+        for idx, script in zip(save_graph[1:],action_scripts):
+            print('Script : ')
+            for l in script:
+                print('  - ',l)
+            graphs.append(graph_list[idx])
+            print('Changes : ')
+            if verbose:
+                print_graph_difference(graphs[-2],graphs[-1])
+    
