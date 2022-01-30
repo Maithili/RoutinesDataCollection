@@ -39,13 +39,13 @@ def print_graph_difference(g1,g2):
             print (' + ',c1,e['relation_type'],c2)
             if e['from_id'] in remaining_objects:
                 remaining_objects.remove(e['from_id'])
-    for id in remaining_objects:
-        for e in g2['edges']:
-            if e['from_id'] == id and e['relation_type'] in ['INSIDE','ON']:
-                c2 = class_from_id(g2,e['to_id'])
-                if c2 not in ignore_for_edges:
-                    c1 = class_from_id(g2,e['from_id'])
-                    print (' + ',c1,e['relation_type'],c2)
+    # for id in remaining_objects:
+    #     for e in g2['edges']:
+    #         if e['from_id'] == id and e['relation_type'] in ['INSIDE','ON']:
+    #             c2 = class_from_id(g2,e['to_id'])
+    #             if c2 not in ignore_for_edges:
+    #                 c1 = class_from_id(g2,e['from_id'])
+    #                 print (' + ',c1,e['relation_type'],c2)
 
 
 def read_program(file_name, node_map):
