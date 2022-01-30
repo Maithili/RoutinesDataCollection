@@ -12,10 +12,10 @@
 [grab] <oil>
 [find] <kitchen_counter>
 [putback] <oil> <kitchen_counter>
-[find] <pot>
-[grab] <pot>
+[find] <cookingpot>
+[grab] <cookingpot>
 [find] <kitchen_counter>
-[putback] <pot> <kitchen_counter>
+[putback] <cookingpot> <kitchen_counter>
 ## 6-7
 [find] <food_rice>
 [grab] <food_rice>
