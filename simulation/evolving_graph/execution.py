@@ -115,6 +115,8 @@ class WalkExecutor(ActionExecutor):
         
         char_room = _get_room_node(state, char_node)
         node_room = _get_room_node(state, node)
+        if node_room.class_name == 'outside':
+            return True
 
         doors = state.get_nodes_by_attr('class_name', 'door')
         doorjambs = state.get_nodes_by_attr('class_name', 'doorjamb')
