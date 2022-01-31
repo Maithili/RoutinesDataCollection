@@ -1,4 +1,3 @@
-
 ## 4 - 5
 [Walk] <dining_room>
 [Walk] <kitchen_cabinet>
@@ -11,10 +10,11 @@
 [Putin] <cloth_napkin> <basket_for_clothes>
 [Find] <basket_for_clothes>
 [Pull] <basket_for_clothes>
-[Walk] <washing_machine>
 [Find] <kitchen_cabinet>
 [Find] <laundry_detergent>
 [Grab] <laundry_detergent>
+[Walk] <washing_machine>
+[Putback] <laundry_detergent> <washing_machine>
 
 ## 3 - 7
 [Walk] <washing_machine>
@@ -24,20 +24,17 @@
 [Find] <washing_machine>
 [Walk] <washing_machine>
 [Putin] <cloth_napkin> <washing_machine>
-+<cloth_napkin>
+[Find] <laundry_detergent>
+[Grab] <laundry_detergent>
 [Pour] <laundry_detergent> <washing_machine>
 [Close] <washing_machine>
 [Switchon] <washing_machine>
 [Walk] <kitchen_cabinet> 
 [Putback] <laundry_detergent> <kitchen_cabinet>
 [Close] <kitchen_cabinet>
-[Walk] <washing_machine>
-
 ## 30-45 
+[Walk] <washing_machine>
 [Switchoff] <washing_machine>
--<cloth_napkin>
-
-## 3 - 7
 [Open] <washing_machine>
 [Grab] <cloth_napkin>
 [Close] <washing_machine>
