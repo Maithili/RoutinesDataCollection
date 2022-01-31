@@ -340,6 +340,7 @@
     ],
     "coffee_filter": [
         "GRABBABLE",
+        "RECIPIENT",
         "HAS_PAPER",
         "MOVABLE"
     ],

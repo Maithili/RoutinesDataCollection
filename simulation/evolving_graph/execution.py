@@ -765,9 +765,9 @@ class PourExecutor(ActionExecutor):
 
     def _check_pourable(self, state: EnvironmentState, src_node: GraphNode, dest_node: GraphNode, info: ExecutionInfo):
 
-        if Property.POURABLE not in src_node.properties and Property.DRINKABLE not in src_node.properties and Property.CREAM not in src_node.properties:
-            info.error('{} is not pourable or drinkable', src_node)
-            return False
+        # if Property.POURABLE not in src_node.properties and Property.DRINKABLE not in src_node.properties and Property.CREAM not in src_node.properties:
+        #     info.error('{} is not pourable or drinkable', src_node)
+        #     return False
 
         if Property.RECIPIENT not in dest_node.properties and dest_node.class_name not in ["hands_both", "sponge", "face"]:
             info.error('{} is not recipient', dest_node)
