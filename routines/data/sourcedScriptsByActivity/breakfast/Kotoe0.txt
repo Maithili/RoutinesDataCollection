@@ -11,7 +11,9 @@
 [Grab] <coffee_filter>
 [Find] <coffe_maker>
 [Putin] <coffee_filter> <coffe_maker>
-[Putin] <ground_coffee> <coffee_filter>
+[Pour] <ground_coffee> <coffee_filter>
+[Find] <kitchen_counter>
+[Putback] <ground_coffee> <kitchen_counter>
 [Find] <mug>
 [Grab] <mug>
 [Find] <coffe_maker>
@@ -24,6 +26,7 @@
 [Walk] <cupboard>
 [Putin] <ground_coffee> <cupboard>
 [Close] <cupboard>
+## 2-3
 [Walk] <fridge>
 [Open] <fridge>
 [Find] <food_egg>
@@ -34,11 +37,20 @@
 [Open] <cupboard>
 [Find] <sauce_pan>
 [Grab] <sauce_pan>
-## 10-12
 [Walk] <stove>
 [Putback] <sauce_pan> <stove>
 [Switchon] <stove>
-[Putin] <food_egg> <sauce_pan>
+[Pour] <food_egg> <sauce_pan>
+[Find] <kitchen_counter>
+[Putback] <food_egg> <kitchen_counter>
+## 5-6
+[Find] <food_egg>
+[Grab] <food_egg>
+[Find] <fridge>
+[Open] <fridge>
+[Putback] <food_egg> <fridge>
+[Close] <fridge>
+[Find] <stove>
 [Switchoff] <stove>
 ## 3-5
 [Walk] <cupboard>
@@ -47,11 +59,12 @@
 [Close] <cupboard>
 [Walk] <kitchen_counter>
 [Putback] <plate> <kitchen_counter>
-[Find] <food_egg>
-[Grab] <food_egg>
 [Find] <plate>
-[Putback] <food_egg> <plate>
-+<food_egg>
+[Grab] <sauce_pan>
+[Pour] <sauce_pan> <plate>
+[Find] <kitchen_counter>
+[Putback] <sauce_pan> <kitchen_counter>
+## 2-4
 [Find] <plate>
 [Grab] <plate>
 [Find] <coffe_maker>
@@ -60,7 +73,6 @@
 [Find] <mug>
 [Grab] <mug>
 [Close] <coffe_maker>
-## 1-2
 [Walk] <table_dining_room>
 [Putback] <mug> <table_dining_room>
 +<mug>
@@ -68,6 +80,7 @@
 +<plate>
 [Walk] <cupboard>
 [Open] <cupboard>
+## 1-2
 [Find] <fork>
 [Grab] <fork>
 [Close] <cupboard>
@@ -82,17 +95,16 @@
 [Putback] <mug> <table_dining_room>
 [Find] <plate>
 [Grab] <plate>
-[Find] <food_egg>
-[Grab] <food_egg>
-[Eat] <food_egg>
-[Putback] <food_egg> <plate>
--<food_egg>
+[Eat] <plate>
+[Putback] <plate> <table_dining_room>
 -<fork>
 -<plate>
 -<mug>
 ## 5-6
 [Find] <mug>
 [Grab] <mug>
+[Find] <plate>
+[Grab] <plate>
 [Walk] <sink_dining_room>
 [Putback] <mug> <sink_dining_room>
 [Putback] <plate> <sink_dining_room>
@@ -103,6 +115,12 @@
 +<fork>
 +<plate>
 +<mug>
+## 2-3
+[Find] <sauce_pan>
+[Grab] <sauce_pan>
+[Walk] <sink_dining_room>
+[Putback] <sauce_pan> <sink_dining_room>
+## 5-6
 [Find] <faucet_dining_room>
 [Switchon] <faucet_dining_room>
 [Rinse] <mug>
@@ -140,5 +158,10 @@
 [Find] <cupboard>
 [Putin] <fork> <cupboard>
 [Close] <cupboard> 
-
-
+##2-3
+[Find] <sauce_pan>
+[Grab] <sauce_pan>
+[Walk] <cupboard>
+[Open] <cupboard> 
+[Putback] <sauce_pan> <cupboard>
+[Close] <cupboard> 
