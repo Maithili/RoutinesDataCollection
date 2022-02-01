@@ -92,7 +92,7 @@ class WalkExecutor(ActionExecutor):
 
                 # close to object in hands
                 char_node = _get_character_node(state)
-                char_room = _get_room_node(state, char_node)
+                char_room = _get_room_node(state, node)
                 nodes_in_hands = _find_nodes_from(state, char_node, relations=[Relation.HOLDS_LH, Relation.HOLDS_RH])
                 for node_in_hands in nodes_in_hands:
                     changes.append(DeleteEdges(NodeInstance(node_in_hands), [Relation.INSIDE, Relation.CLOSE, Relation.FACING], AnyNode(), delete_reverse=True))
@@ -412,9 +412,11 @@ class PutExecutor(ActionExecutor):
             holding_hand = _find_holding_hand(state, dest_node)
             for node in nodes_to_put:
                 changes += [DeleteEdges(CharacterNode(), [Relation.HOLDS_LH, Relation.HOLDS_RH], NodeInstance(node)),
+                    DeleteEdges(NodeInstance(node), [Relation.INSIDE, Relation.ON, Relation.CLOSE], AnyNode()),
                     AddEdges(CharacterNode(), Relation.CLOSE, NodeInstance(dest_node), add_reverse=True),
                     AddEdges(NodeInstance(node), Relation.CLOSE, NodeInstance(dest_node), add_reverse=True),
-                    AddEdges(NodeInstance(node), self.relation, NodeInstance(dest_node))]
+                    AddEdges(NodeInstance(node), self.relation, NodeInstance(dest_node)),
+                    AddEdges(NodeInstance(node), Relation.INSIDE, NodeInstance(_get_room_node(state, _get_character_node(state))))]
                 if holding_hand is not None:
                     changes += [AddEdges(CharacterNode(), holding_hand, NodeInstance(node))]
             yield state.change_state(changes)
