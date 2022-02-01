@@ -8,10 +8,14 @@
 [Grab] <chef_knife>
 ## 1-2
 [Find] <food_bread>
-[Drop] <food_bread>
-[Cut] <food_bread> 
+[Find] <kitchen_counter>
+[Find] <plate>
+[Pour] <food_bread> <plate>
 [Find] <chef_knife>
-[Drop] <chef_knife>
+[Find] <kitchen_counter>
+[PutBack] <chef_knife> <kitchen_counter>
+[Find] <food_bread>
+[PutBack] <food_bread> <kitchen_counter>
 [Eat] <food_bread>
 ## 0-1
 [Find] <food_bread>

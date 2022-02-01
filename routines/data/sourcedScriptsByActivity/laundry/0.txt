@@ -24,7 +24,8 @@
 [Grab] <laundry_detergent>
 [Close] <kitchen_cabinet>
 [Find] <washing_machine>
-[PutBack] <laundry_detergent> <washing_machine>
+[Pour] <laundry_detergent> <washing_machine>
+[Putback] <laundry_detergent> <washing_machine>
 ## 4-6
 [Walk] <washing_machine>
 [Find] <washing_machine>

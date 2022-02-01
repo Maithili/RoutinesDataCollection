@@ -33,6 +33,9 @@
 
 ## 0-1
 [Find] <table_dining_room>
+[Find] <plate>
+[Pour] <food_chicken> <plate>
+[Walk] <table_dining_room>
 [Putback] <food_chicken> <table_dining_room>
 +<food_chicken>
 
