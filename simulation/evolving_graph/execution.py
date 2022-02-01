@@ -296,10 +296,23 @@ class GrabExecutor(ActionExecutor):
             if new_relation is not None:
                 char_node = _get_character_node(state)
                 char_room = _get_room_node(state, char_node)
-                changes = [DeleteEdges(NodeInstance(node), [Relation.ON, Relation.INSIDE, Relation.CLOSE], AnyNode(), delete_reverse=False),
+                changes = [DeleteEdges(NodeInstance(node), [Relation.ON, Relation.INSIDE, Relation.CLOSE], AnyNode(), delete_reverse=True),
                            AddEdges(CharacterNode(), Relation.CLOSE, NodeInstance(node), add_reverse=True), 
                            AddEdges(CharacterNode(), new_relation, NodeInstance(node)), 
                            AddEdges(NodeInstance(node), Relation.INSIDE, NodeInstance(char_room))]
+                nodes_inside_grabbed = _find_nodes_to(state, node, [Relation.INSIDE])
+                nodes_on_grabbed = _find_nodes_to(state, node, [Relation.ON])
+                for indirect_node in nodes_inside_grabbed + nodes_on_grabbed:
+                    changes += [DeleteEdges(NodeInstance(indirect_node), [Relation.ON, Relation.INSIDE, Relation.CLOSE], AnyNode(), delete_reverse=True),
+                           AddEdges(CharacterNode(), Relation.CLOSE, NodeInstance(indirect_node), add_reverse=True), 
+                           AddEdges(CharacterNode(), new_relation, NodeInstance(indirect_node)), 
+                           AddEdges(NodeInstance(indirect_node), Relation.INSIDE, NodeInstance(char_room))]
+                for indirect_node in nodes_inside_grabbed:
+                    changes += [AddEdges(NodeInstance(indirect_node), Relation.CLOSE, NodeInstance(node), add_reverse=True),
+                                AddEdges(NodeInstance(indirect_node), Relation.INSIDE, NodeInstance(node))]
+                for indirect_node in nodes_on_grabbed:
+                    changes += [AddEdges(NodeInstance(indirect_node), Relation.CLOSE, NodeInstance(node), add_reverse=True),
+                                AddEdges(NodeInstance(indirect_node), Relation.ON, NodeInstance(node))]
                 new_close, relation = _find_first_node_from(state, node, [Relation.ON, Relation.INSIDE, Relation.CLOSE])
                 if new_close is not None:
                     changes += [AddEdges(CharacterNode(), Relation.CLOSE, NodeInstance(new_close), add_reverse=True),
@@ -390,13 +403,18 @@ class PutExecutor(ActionExecutor):
         if src_node is None or dest_node is None:
             info.script_object_found_error(current_line.object() if src_node is None else current_line.subject())
         elif _check_puttable(state, src_node, dest_node, self.relation, info):
-            yield state.change_state(
-                [DeleteEdges(CharacterNode(), [Relation.HOLDS_LH, Relation.HOLDS_RH], NodeInstance(src_node)),
-                 AddEdges(CharacterNode(), Relation.CLOSE, NodeInstance(dest_node), add_reverse=True),
-                 AddEdges(NodeInstance(src_node), Relation.CLOSE, NodeInstance(dest_node), add_reverse=True),
-                 AddEdges(NodeInstance(src_node), self.relation, NodeInstance(dest_node)),
-                 ClearExecDataKey((Action.GRAB, src_node.id))]
-            )
+            nodes_to_put = _find_nodes_to(state, src_node, [Relation.INSIDE, Relation.ON]) + [src_node]
+            changes = [ClearExecDataKey((Action.GRAB, src_node.id))]
+            ## if destination node is being held, these will be held in that hand
+            holding_hand = _find_holding_hand(state, dest_node)
+            for node in nodes_to_put:
+                changes += [DeleteEdges(CharacterNode(), [Relation.HOLDS_LH, Relation.HOLDS_RH], NodeInstance(node)),
+                    AddEdges(CharacterNode(), Relation.CLOSE, NodeInstance(dest_node), add_reverse=True),
+                    AddEdges(NodeInstance(node), Relation.CLOSE, NodeInstance(dest_node), add_reverse=True),
+                    AddEdges(NodeInstance(node), self.relation, NodeInstance(dest_node))]
+                if holding_hand is not None:
+                    changes += [AddEdges(CharacterNode(), holding_hand, NodeInstance(node))]
+            yield state.change_state(changes)
 
 
 class PutBackExecutor(ActionExecutor):
