@@ -11,7 +11,7 @@
 [Close] <dresser>
 ## 0-1
 [Walk] <light_bedroom>
-[Switchoff] <light_bedroom>
+Switchoff <light_bedroom>
 ## 420-560
 [Walk] <bed>
 [Find] <bed>

@@ -29,8 +29,8 @@
 [Find] <keys>
 [Grab] <keys>
 [Putin] <keys> <bag>
-[Find] <tvstand_dining_room>
-[Putback] <bag> <tvstand_dining_room>
+[Find] <bench>
+[Putback] <bag> <bench>
 [Find] <shoes>
 [Grab] <shoes>
 [Puton] <shoes>
@@ -43,8 +43,8 @@
 
 ##1-2
 [Walk] <dining_room>
-[Find] <tvstand_dining_room>
-[Putback] <mail> <tvstand_dining_room>
+[Find] <bench>
+[Putback] <mail> <bench>
 [Putoff] <shoes>
 
 

@@ -5,6 +5,7 @@
 [Find] <deodorant>
 [Grab] <deodorant>
 [PutObjBack] <deodorant>
+[Close] <bathroom_cabinet>
 ##2-4
 [Walk] <bedroom>
 [Walk] <dresser>

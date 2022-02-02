@@ -72,4 +72,6 @@
 [Find] <table_dining_room>
 [Scrub] <table_dining_room>
 [Find] <trashcan>
-[Putback] <napkin> <trashcan>
+[Open] <trashcan>
+[Putin] <napkin> <trashcan>
+[Close] <trashcan>

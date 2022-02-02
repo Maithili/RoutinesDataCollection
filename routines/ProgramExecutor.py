@@ -19,7 +19,7 @@ def print_graph_difference(g1,g2):
     edges_added = [e for e in g2['edges'] if e not in g1['edges']]
     nodes_removed = [n for n in g1['nodes'] if n['id'] not in [n2['id'] for n2 in g2['nodes']]]
     nodes_added = [n for n in g2['nodes'] if n['id'] not in [n2['id'] for n2 in g1['nodes']]]
-    ignore_for_edges = ['character','wall']
+    ignore_for_edges = ['wall']
 
     for n in nodes_removed:
         print ('Removed node : ',n)
@@ -29,13 +29,13 @@ def print_graph_difference(g1,g2):
     for e in edges_removed:
         c1 = class_from_id(g1,e['from_id'])
         c2 = class_from_id(g1,e['to_id'])
-        if c1 not in ignore_for_edges and c2 not in ignore_for_edges and e['relation_type'] in ['INSIDE','ON']:
+        if c1 not in ignore_for_edges and c2 not in ignore_for_edges and e['relation_type'] in ['INSIDE','ON','HOLDS_RH','HOLDS_LH']:
             print (' - ',c1,e['relation_type'],c2)
             remaining_objects.append(e['from_id'])
     for e in edges_added:
         c1 = class_from_id(g2,e['from_id'])
         c2 = class_from_id(g2,e['to_id'])
-        if c1 not in ignore_for_edges and c2 not in ignore_for_edges and e['relation_type'] in ['INSIDE','ON']:
+        if c1 not in ignore_for_edges and c2 not in ignore_for_edges and e['relation_type'] in ['INSIDE','ON','HOLDS_RH','HOLDS_LH']:
             print (' + ',c1,e['relation_type'],c2)
             if e['from_id'] in remaining_objects:
                 remaining_objects.remove(e['from_id'])
@@ -135,7 +135,7 @@ def execute_program(program_file, graph_file, node_map, verbose=False):
     if verbose:
         print('This is how the scene changes after every set of actions...')
         for idx, script in zip(save_graph[1:],action_scripts):
-            print('Script : ')
+            print('\nScript : ')
             for l in script:
                 print('  - ',l)
             graphs.append(graph_list[idx])

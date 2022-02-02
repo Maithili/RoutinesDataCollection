@@ -1,7 +1,6 @@
 ## 1-2
 [Walk] <curtain_bedroom>
 [Walk] <light_bedroom>
-[Switchoff] <light_bedroom>
 [Walk] <alarm_clock>
 [Switchon] <alarm_clock>
 [Walk] <bed>
