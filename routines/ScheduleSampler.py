@@ -9,32 +9,32 @@ import matplotlib.pyplot as plt
 weekday_schedules = []
 weekend_schedules = []
 activity_map = {
-"bathe_shower" : "showering",
+"wake_up" : "getting_out_of_bed",
 "brush_teeth" : "brushing_teeth",
-"computer_work" : "computer_work",
-"connect_w_friends" : "socializing",
-"clean" : "cleaning",
-"clean_kitchen" : "kitchen_cleaning",
-"diary_journaling" : None,
-"do_laundry" : "laundry",
+"bathe_shower" : "showering",
+"prepare_eat_breakfast" : "breakfast",
 "get_dressed" : "getting_dressed",
-"hand_wash_clothes" : "laundry",
+"computer_work" : "computer_work",
+"prepare_eat_lunch" : "lunch",
 "leave_home" : "leaving_home_and_coming_back",
 "come_home" : "leaving_home_and_coming_back",
-"listen_to_music" : "listening_to_music",
-"prepare_eat_breakfast" : "breakfast",
-"prepare_eat_dinner" : "dinner",
-"prepare_eat_lunch" : "lunch",
 "play_music" : "playing_music",
 "read" : "reading",
-"sleep" : "sleeping",
 "take_medication" : "taking_medication",
+"prepare_eat_dinner" : "dinner",
+"connect_w_friends" : "socializing",
+"diary_journaling" : None,
+"sleep" : "sleeping",
+"hand_wash_clothes" : "laundry",
+"listen_to_music" : "listening_to_music",
+"clean" : "cleaning",
+"clean_kitchen" : "kitchen_cleaning",
 "take_out_trash" : "take_out_trash",
+"do_laundry" : "laundry",
 "use_restroom" : "going_to_the_bathroom",
 "vacuum_clean" : "vaccuum_cleaning",
 "wash_dishes" : "wash_dishes",
 "watch_tv" : "watching_tv",
-"wake_up" : "getting_out_of_bed",
 }
 start_times = [6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
 
@@ -55,10 +55,11 @@ class ScheduleSampler():
         self.activity_threshold = {s:{} for s in start_times}
         # self.fig = plt.plot()
         # plt.rcParams["figure.figsize"] = (27, 18.5)
+        self.filter_num = filter_num
         for act, freq in self.activity_histograms.items():
             if act is None:
                 continue
-            filtered = [max(0,f-filter_num) for f in freq.values()]
+            filtered = [max(0,f-self.filter_num) for f in freq.values()]
             # plt.bar(freq.keys(), filtered, label=act, bottom=running_sum)
             for i,st in enumerate(freq.keys()):
                 self.activity_threshold[st][act] = (running_sum[i], running_sum[i] + filtered[i])
@@ -114,5 +115,16 @@ class ScheduleSampler():
     def remove(self, activity):
         self.removed_activities.append(activity)
 
+    def sample_time_for(self, activity):
+        max_sample = sum(self.activity_histograms[activity].values()) - len(self.activity_histograms[activity])*self.filter_num
+        sample = random.random()*max_sample
+        for st, freq in self.activity_histograms[activity].items():
+            filtered_freq = freq-self.filter_num
+            if sample <= filtered_freq:
+                t_hours = st + random.random()
+                t_mins = int(round(t_hours*60))
+                return t_mins
+            sample -= filtered_freq
+        raise RuntimeError('This should not happen!')
 
 
