@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 weekday_schedules = []
 weekend_schedules = []
 activity_map = {
-"wake_up" : "getting_out_of_bed",
 "brush_teeth" : "brushing_teeth",
 "bathe_shower" : "showering",
 "prepare_eat_breakfast" : "breakfast",
@@ -24,7 +23,6 @@ activity_map = {
 "prepare_eat_dinner" : "dinner",
 "connect_w_friends" : "socializing",
 "diary_journaling" : None,
-"sleep" : "sleeping",
 "hand_wash_clothes" : "laundry",
 "listen_to_music" : "listening_to_music",
 "clean" : "cleaning",
@@ -35,12 +33,15 @@ activity_map = {
 "vacuum_clean" : "vaccuum_cleaning",
 "wash_dishes" : "wash_dishes",
 "watch_tv" : "watching_tv",
+## unnecessary
+"wake_up" : None,
+"sleep" : None,
 }
 start_times = [6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
 
 
 class ScheduleSampler():
-    def __init__(self, data_dir='data/AMT_Schedules', write_to_file=False, filter_num = 3, idle_sampling_factor = 1.5):
+    def __init__(self, data_dir='data/AMT_Schedules', write_to_file=False, filter_num = 3, idle_sampling_factor = 1.0):
         self.activity_histograms = {k:{s:0 for s in start_times} for k in activity_map.values()}
         for root, dirs, files in os.walk(data_dir):
             for f in files:
