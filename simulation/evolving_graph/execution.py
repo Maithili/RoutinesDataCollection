@@ -94,12 +94,12 @@ class WalkExecutor(ActionExecutor):
                 char_node = _get_character_node(state)
                 char_room = _get_room_node(state, node)
                 nodes_in_hands = _find_nodes_from(state, char_node, relations=[Relation.HOLDS_LH, Relation.HOLDS_RH])
-                for node_in_hands in nodes_in_hands:
-                    changes.append(DeleteEdges(NodeInstance(node_in_hands), [Relation.INSIDE, Relation.CLOSE, Relation.FACING], AnyNode(), delete_reverse=True))
+                # for node_in_hands in nodes_in_hands:
+                #     changes.append(DeleteEdges(NodeInstance(node_in_hands), [Relation.INSIDE, Relation.CLOSE, Relation.FACING], AnyNode(), delete_reverse=True))
 
                 for node_in_hands in nodes_in_hands:
                     changes.append(AddEdges(CharacterNode(), Relation.CLOSE, NodeInstance(node_in_hands), add_reverse=True))
-                    changes.append(AddEdges(NodeInstance(node_in_hands), Relation.INSIDE, NodeInstance(char_room)))
+                #     changes.append(AddEdges(NodeInstance(node_in_hands), Relation.INSIDE, NodeInstance(char_room)))
 
                 # close to all objects on node
                 if Property.SURFACES in node.properties:
@@ -297,7 +297,8 @@ class GrabExecutor(ActionExecutor):
             if new_relation is not None:
                 char_node = _get_character_node(state)
                 char_room = _get_room_node(state, char_node)
-                changes = [DeleteEdges(NodeInstance(node), [Relation.ON, Relation.INSIDE, Relation.CLOSE], AnyNode(), delete_reverse=True),
+                changes = [
+                    # DeleteEdges(NodeInstance(node), [Relation.ON, Relation.INSIDE, Relation.CLOSE], AnyNode(), delete_reverse=True),
                            AddEdges(CharacterNode(), Relation.CLOSE, NodeInstance(node), add_reverse=True), 
                            AddEdges(CharacterNode(), new_relation, NodeInstance(node)), 
                            AddEdges(NodeInstance(node), Relation.INSIDE, NodeInstance(char_room))]
@@ -305,7 +306,8 @@ class GrabExecutor(ActionExecutor):
                 nodes_inside_grabbed = _find_nodes_to(state, node, [Relation.INSIDE])
                 nodes_on_grabbed = _find_nodes_to(state, node, [Relation.ON])
                 for indirect_node in nodes_inside_grabbed + nodes_on_grabbed:
-                    changes += [DeleteEdges(NodeInstance(indirect_node), [Relation.ON, Relation.INSIDE, Relation.CLOSE], AnyNode(), delete_reverse=True),
+                    changes += [
+                        # DeleteEdges(NodeInstance(indirect_node), [Relation.ON, Relation.INSIDE, Relation.CLOSE], AnyNode(), delete_reverse=True),
                            AddEdges(CharacterNode(), Relation.CLOSE, NodeInstance(indirect_node), add_reverse=True), 
                            AddEdges(CharacterNode(), new_relation, NodeInstance(indirect_node)), 
                            AddEdges(NodeInstance(indirect_node), Relation.INSIDE, NodeInstance(char_room))]
