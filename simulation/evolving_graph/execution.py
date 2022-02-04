@@ -293,35 +293,39 @@ class GrabExecutor(ActionExecutor):
         if node is None:
             info.object_found_error()
         else:
-            new_relation = self.check_grabbable(state, node, info)
-            if new_relation is not None:
-                char_node = _get_character_node(state)
-                char_room = _get_room_node(state, char_node)
-                changes = [
-                    # DeleteEdges(NodeInstance(node), [Relation.ON, Relation.INSIDE, Relation.CLOSE], AnyNode(), delete_reverse=True),
-                           AddEdges(CharacterNode(), Relation.CLOSE, NodeInstance(node), add_reverse=True), 
-                           AddEdges(CharacterNode(), new_relation, NodeInstance(node)), 
-                           AddEdges(NodeInstance(node), Relation.INSIDE, NodeInstance(char_room))]
-                ### Maithili : Grab all objects on/inside the one beign grabbed
-                nodes_inside_grabbed = _find_nodes_to(state, node, [Relation.INSIDE])
-                nodes_on_grabbed = _find_nodes_to(state, node, [Relation.ON])
-                for indirect_node in nodes_inside_grabbed + nodes_on_grabbed:
-                    changes += [
-                        # DeleteEdges(NodeInstance(indirect_node), [Relation.ON, Relation.INSIDE, Relation.CLOSE], AnyNode(), delete_reverse=True),
-                           AddEdges(CharacterNode(), Relation.CLOSE, NodeInstance(indirect_node), add_reverse=True), 
-                           AddEdges(CharacterNode(), new_relation, NodeInstance(indirect_node)), 
-                           AddEdges(NodeInstance(indirect_node), Relation.INSIDE, NodeInstance(char_room))]
-                for indirect_node in nodes_inside_grabbed:
-                    changes += [AddEdges(NodeInstance(indirect_node), Relation.CLOSE, NodeInstance(node), add_reverse=True),
-                                AddEdges(NodeInstance(indirect_node), Relation.INSIDE, NodeInstance(node))]
-                for indirect_node in nodes_on_grabbed:
-                    changes += [AddEdges(NodeInstance(indirect_node), Relation.CLOSE, NodeInstance(node), add_reverse=True),
-                                AddEdges(NodeInstance(indirect_node), Relation.ON, NodeInstance(node))]
-                new_close, relation = _find_first_node_from(state, node, [Relation.ON, Relation.INSIDE, Relation.CLOSE])
-                if new_close is not None:
-                    changes += [AddEdges(CharacterNode(), Relation.CLOSE, NodeInstance(new_close), add_reverse=True),
-                                AddExecDataValue((Action.GRAB, node.id), (new_close, relation))]
-                yield state.change_state(changes)
+            char_node = _get_character_node(state)
+            nodes_in_hands = _find_nodes_from(state, char_node, [Relation.HOLDS_RH, Relation.HOLDS_LH])
+            if node in nodes_in_hands:
+                yield state.change_state([])
+            else:
+                new_relation = self.check_grabbable(state, node, info)
+                if new_relation is not None:
+                    char_room = _get_room_node(state, char_node)
+                    changes = [
+                        # DeleteEdges(NodeInstance(node), [Relation.ON, Relation.INSIDE, Relation.CLOSE], AnyNode(), delete_reverse=True),
+                            AddEdges(CharacterNode(), Relation.CLOSE, NodeInstance(node), add_reverse=True), 
+                            AddEdges(CharacterNode(), new_relation, NodeInstance(node)), 
+                            AddEdges(NodeInstance(node), Relation.INSIDE, NodeInstance(char_room))]
+                    ### Maithili : Grab all objects on/inside the one beign grabbed
+                    nodes_inside_grabbed = _find_nodes_to(state, node, [Relation.INSIDE])
+                    nodes_on_grabbed = _find_nodes_to(state, node, [Relation.ON])
+                    for indirect_node in nodes_inside_grabbed + nodes_on_grabbed:
+                        changes += [
+                            # DeleteEdges(NodeInstance(indirect_node), [Relation.ON, Relation.INSIDE, Relation.CLOSE], AnyNode(), delete_reverse=True),
+                            AddEdges(CharacterNode(), Relation.CLOSE, NodeInstance(indirect_node), add_reverse=True), 
+                            AddEdges(CharacterNode(), new_relation, NodeInstance(indirect_node)), 
+                            AddEdges(NodeInstance(indirect_node), Relation.INSIDE, NodeInstance(char_room))]
+                    for indirect_node in nodes_inside_grabbed:
+                        changes += [AddEdges(NodeInstance(indirect_node), Relation.CLOSE, NodeInstance(node), add_reverse=True),
+                                    AddEdges(NodeInstance(indirect_node), Relation.INSIDE, NodeInstance(node))]
+                    for indirect_node in nodes_on_grabbed:
+                        changes += [AddEdges(NodeInstance(indirect_node), Relation.CLOSE, NodeInstance(node), add_reverse=True),
+                                    AddEdges(NodeInstance(indirect_node), Relation.ON, NodeInstance(node))]
+                    new_close, relation = _find_first_node_from(state, node, [Relation.ON, Relation.INSIDE, Relation.CLOSE])
+                    if new_close is not None:
+                        changes += [AddEdges(CharacterNode(), Relation.CLOSE, NodeInstance(new_close), add_reverse=True),
+                                    AddExecDataValue((Action.GRAB, node.id), (new_close, relation))]
+                    yield state.change_state(changes)
 
     def check_grabbable(self, state: EnvironmentState, node: GraphNode, info: ExecutionInfo) -> Optional[Relation]:
         if Property.GRABBABLE not in node.properties and node.class_name not in ['water', 'child']:
