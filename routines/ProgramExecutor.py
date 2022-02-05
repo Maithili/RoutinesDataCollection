@@ -57,30 +57,33 @@ def read_program(file_name, node_map):
         class_id = [a[1:-1] for a in string_in.split(' ')]
         return (int(class_id[1]), class_id[0])
 
+    def get_duration(header):
+        durations = (header).split('-')
+        assert len(durations)==2, f"Invalid time range {header} in {file_name}"
+        duration_min = int(durations[0].strip())
+        duration_max = int(durations[1].strip())
+        return duration_min, duration_max
+
     with open(file_name) as f:
         lines = []
-        full_program = []
+        durations = []
         obj_start, obj_end = [], []
         index = 1
-        object_use = {'start':[], 'end':[]}
         for line in f:
             if line.startswith('##'):
+                num_lines = len(lines) - len(durations)
+                if num_lines > 0:
+                    durations += [((duration_min/num_lines),(duration_max/num_lines))] * num_lines
                 header = line[2:].strip()
-                action_headers.append(header)
-                action_scripts.append(lines)
-                object_use['start'].append(obj_start)
-                object_use['end'].append(obj_end)
-                lines = []
-                obj_start, obj_end = [], []
-                index = 1
+                duration_min, duration_max = get_duration(header)
             line = line.strip()
             if line.startswith('+'):
                 obj = obj_class_id_from_string(node_map[line[1:]])
-                obj_start.append(obj)
+                obj_start[-1].append(obj)
                 continue
             if line.startswith('-'):
                 obj = obj_class_id_from_string(node_map[line[1:]])
-                obj_end.append(obj)
+                obj_end[-1].append(obj)
                 continue
             if '[' not in line:
                 continue
@@ -95,27 +98,25 @@ def read_program(file_name, node_map):
                     print(f'The following line has a mistake! Did you write the correct object and activity names? \n {line}')
                     raise e
                 lines.append(scr_line)
-                full_program.append(scr_line)
+                obj_start.append([])
+                obj_end.append([])
                 index += 1
-        action_scripts.append(lines)
-        action_scripts = action_scripts[1:]
-    return action_headers, action_scripts, object_use, full_program
+        num_lines = len(lines) - len(durations)
+        if num_lines > 0:
+            durations += [((duration_min/num_lines),(duration_max/num_lines))] * num_lines
+    return durations, lines, obj_start, obj_end
 
 def execute_program(program_file, graph_file, node_map, verbose=False):
     with open (graph_file,'r') as f:
         init_graph_dict = json.load(f)
     init_graph = EnvironmentGraph(init_graph_dict)
-    action_headers, action_scripts, action_obj_use, whole_program = read_program(program_file, node_map)
+    durations, lines, obj_start, obj_end = read_program(program_file, node_map)
     name_equivalence = utils.load_name_equivalence()
     graphs = [init_graph.to_dict()]
 
     print('Checking scripts...',end='')
-    save_graph = [0]
-    for a in action_scripts:
-        save_graph.append(save_graph[-1] + len(a))
     executor = ScriptExecutor(EnvironmentGraph(graphs[-1]), name_equivalence)
-    success, state, graph_list = executor.execute(Script(whole_program), w_graph_list=True)
-    # graph_list = [init_graph_dict] + graph_list[1:]
+    success, state, graph_list = executor.execute(Script(lines), w_graph_list=True)
     print('exec info ---- ')
     print(executor.info.get_error_string())
     if not success:
@@ -131,15 +132,10 @@ def execute_program(program_file, graph_file, node_map, verbose=False):
     executor.check_final_state()
     print('Final state OK\n')
 
-    assert len(save_graph)-1 == len(action_scripts)
     if verbose:
         print('This is how the scene changes after every set of actions...')
-        for idx, script in zip(save_graph[1:],action_scripts):
-            print('\nScript : ')
-            for l in script:
-                print('  - ',l)
-            graphs.append(graph_list[idx])
-            print('Changes : ')
+        for script, graph, prev_graph in zip(lines,graph_list[1:],graph_list[:-1]):
+            print('Changes from ',script)
             if verbose:
-                print_graph_difference(graphs[-2],graphs[-1])
+                print_graph_difference(prev_graph,graph)
     
