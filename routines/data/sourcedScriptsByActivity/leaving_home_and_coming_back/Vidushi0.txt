@@ -37,7 +37,7 @@
 [Find] <groceries>
 [Grab] <groceries>
 
-# 3-5
+## 3-5
 [Walk] <dining_room>
 [Find] <cupboard>
 [Open] <cupboard>
