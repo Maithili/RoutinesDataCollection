@@ -4,9 +4,11 @@ import json
 import os
 import glob
 import shutil
+from math import ceil
 import numpy as np
 import matplotlib.pyplot as plt
 import random
+import multiprocessing
 import sys
 sys.path.append('..')
 sys.path.append('../simulation')
@@ -18,9 +20,9 @@ from evolving_graph.environment import EnvironmentGraph
 
 from GraphReader import GraphReader, init_graph_file, scene_num
 from ProgramExecutor import read_program
-from ScheduleSampler import ScheduleSampler
+from ScheduleSampler import ScheduleSampler, activity_map
 
-DATASET_DIR = 'data/sourcedRoutines/mc500routines0205'
+DATASET_DIR = 'data/sourcedRoutines/mcsample0207'
 
 random.seed(123)
 def time_mins(mins, hrs, day=0):
@@ -46,17 +48,17 @@ print(f'Using scene {int(scene_num)-1}, i.e. \'TestScene{scene_num}\'')
 
 info = {}
 info['dt'] = 10   # minutes
-info['num_train_routines'] = 500
-info['num_test_routines'] = 50
+info['num_train_routines'] = 10
+info['num_test_routines'] = 2
 info['weekend_days'] = []   #[day_num(day) for day in ['Saturday','Sunday']]
 info['start_time'] = time_mins(mins=0, hrs=6)
 info['end_time'] = time_mins(mins=0, hrs=24)
 info['interleaving'] = False
-info['only_used_objects'] = False
+info['only_used_objects'] = True
 info['graphs_dt_apart'] = False
 
 
-info['max_activities_per_day'] = 7
+# info['max_activities_per_day'] = 7
 info['schedule_sampler_filter_num'] = 3 
 info['idle_sampling_factor'] = 1.0
 
@@ -65,7 +67,6 @@ info['single_script_only'] = False
 
 ignore_classes = ['floor','wall','ceiling','character']
 utilized_object_ids = set()
-scripts_used = {('_'.join(path.split('/')[-2:]))[:-4]:0 for path in glob.glob('data/sourcedScriptsByActivity/*/*.txt')}
 edge_classes = ["INSIDE", "ON"]
 
 
@@ -132,6 +133,9 @@ class Activity():
     def get_end_time(self):
         return self.times[-1] + self.durations[-1]
 
+    def get_start_time(self):
+        return self.times[0]
+
 
 # %% Schedule
 
@@ -156,32 +160,32 @@ class Schedule():
                 raise SamplingFailure(f'Timing conflict : End time {end_time} of an action , exceeds start time {next_start} of next action')
         return all_actions
 
-class ScheduleFromFile(Schedule):
-    def __init__(self, type=None):
-        assert type == None or type in ['weekday','weekend']
-        schedule_options = []
-        if info['breakfast_only']: 
-            self.schedule_file_path = 'data/sourcedSchedules/breakfast/dummy.json' 
-        else:
-            for (root,_,files) in os.walk('data/sourcedSchedules'):
-                if type is not None and type not in root:
-                    continue
-                schedule_options += [os.path.join(root,f) for f in files]
-            self.schedule_file_path = np.random.choice(schedule_options)
-        with open(self.schedule_file_path) as f:
-            schedule = json.load(f)
+# class ScheduleFromFile(Schedule):
+#     def __init__(self, type=None):
+#         assert type == None or type in ['weekday','weekend']
+#         schedule_options = []
+#         if info['breakfast_only']: 
+#             self.schedule_file_path = 'data/sourcedSchedules/breakfast/dummy.json' 
+#         else:
+#             for (root,_,files) in os.walk('data/sourcedSchedules'):
+#                 if type is not None and type not in root:
+#                     continue
+#                 schedule_options += [os.path.join(root,f) for f in files]
+#             self.schedule_file_path = np.random.choice(schedule_options)
+#         with open(self.schedule_file_path) as f:
+#             schedule = json.load(f)
         
-        def sample_act_time(act_time_options):
-            tr = act_time_options[random.randrange(len(act_time_options))]
-            return [[tr[0],0],[tr[1],0]]
+#         def sample_act_time(act_time_options):
+#             tr = act_time_options[random.randrange(len(act_time_options))]
+#             return [[tr[0],0],[tr[1],0]]
         
-        activity_with_sampled_time = [(act_name, sample_act_time(act_time_options)) for act_name,act_time_options in schedule.items()]
-        time_start_mins = time_mins(act_time[0][1], act_time[0][0])
-        time_end_mins = time_mins(act_time[1][1], act_time[1][0])
-        self.activities = [Activity(act_name, time_start_mins=time_start_mins, time_end_mins=time_end_mins, stack_actions = not info['interleaving']) for act_name,act_time in activity_with_sampled_time]
-        random.shuffle(self.activities)
-        num_activities = min(info['max_activities_per_day'], len(self.activities))
-        self.activities = self.activities[:num_activities]
+#         activity_with_sampled_time = [(act_name, sample_act_time(act_time_options)) for act_name,act_time_options in schedule.items()]
+#         time_start_mins = time_mins(act_time[0][1], act_time[0][0])
+#         time_end_mins = time_mins(act_time[1][1], act_time[1][0])
+#         self.activities = [Activity(act_name, time_start_mins=time_start_mins, time_end_mins=time_end_mins, stack_actions = not info['interleaving']) for act_name,act_time in activity_with_sampled_time]
+#         random.shuffle(self.activities)
+#         num_activities = min(info['max_activities_per_day'], len(self.activities))
+#         self.activities = self.activities[:num_activities]
     
 class ScheduleFromHistogram(Schedule):
     def __init__(self, type=None):
@@ -228,6 +232,7 @@ def get_graphs(all_actions, verbose=False):
     complete_script_lines = []
     complete_script_timestamps = []
     complete_sources = []
+    important_objects = set()
     for action in all_actions:
         if verbose:
             print('## Executing '+action['name']+' from '+action['time_from_h']+' to '+action['time_to_h'])
@@ -283,19 +288,19 @@ def get_graphs(all_actions, verbose=False):
             obj_in_use.append([])
             # obj_in_use.append(list(combined_obj_in_use))
             # combined_obj_in_use = set()
-        update_used_objects(graphs[-2],graphs[-1])
+        important_objects.update(get_used_objects(graphs[-2],graphs[-1]))
         if verbose:
             print_graph_difference(graphs[-2],graphs[-1])
             print('Currently using : ',current_objects)
             input('Press something...')
 
-    return graphs, times, obj_in_use, script_string
+    return graphs, times, obj_in_use, script_string, list(important_objects)
 
 
 
 # %% Post processing
 
-def remove_ignored_classes(graphs):
+def remove_ignored_classes(graphs, utilized_object_ids):
     clipped_graphs = []
     for graph in graphs:
         clipped_graphs.append({'nodes':[],'edges':[]})
@@ -341,26 +346,28 @@ def print_graph_difference(g1,g2):
         if c1 != 'character' and c2 != 'character' and e['relation_type'] in edge_classes:
             print ('Added edge   : ',c1,e['relation_type'],c2)
 
-def update_used_objects(g1,g2):
+def get_used_objects(g1,g2):
+    utilized_object_ids = []
     edges_removed = [e for e in g1['edges'] if e not in g2['edges']]
     edges_added = [e for e in g2['edges'] if e not in g1['edges']]
     nodes_removed = [n for n in g1['nodes'] if n['id'] not in [n2['id'] for n2 in g2['nodes']]]
     nodes_added = [n for n in g2['nodes'] if n['id'] not in [n2['id'] for n2 in g1['nodes']]]
     for n in nodes_removed:
-        utilized_object_ids.add(n['id'])
+        utilized_object_ids.append(n['id'])
     for n in nodes_added:
-        utilized_object_ids.add(n['id'])
+        utilized_object_ids.append(n['id'])
     for e in edges_removed:
         if e['relation_type'] in edge_classes and class_from_id(g1,e['from_id'])!='character' and class_from_id(g1,e['to_id'])!='character':
-            utilized_object_ids.add(e['from_id'])
-            utilized_object_ids.add(e['to_id'])
+            utilized_object_ids.append(e['from_id'])
+            utilized_object_ids.append(e['to_id'])
     for e in edges_added:
         if e['relation_type'] in edge_classes and class_from_id(g1,e['from_id'])!='character' and class_from_id(g1,e['to_id'])!='character':
-            utilized_object_ids.add(e['from_id'])
-            utilized_object_ids.add(e['to_id'])
+            utilized_object_ids.append(e['from_id'])
+            utilized_object_ids.append(e['to_id'])
+    return utilized_object_ids
 
 # %% Make a routine
-def make_routine(routine_num, scripts_dir, verbose=False):
+def make_routine(routine_num, scripts_dir, routines_dir, script_use_file=None, verbose=False):
     while True:
         day = np.random.choice(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'])
         day_number = day_num(day)
@@ -368,81 +375,149 @@ def make_routine(routine_num, scripts_dir, verbose=False):
         try:
             s = ScheduleFromHistogram(day_type)
             actions = s.get_combined_script()
-            graphs, times, obj_in_use, script_string = get_graphs(actions)
+            graphs, times, obj_in_use, script_string, imp_obj = get_graphs(actions)
         except SamplingFailure as sf:
             if verbose:
                 print (sf)
             continue
         script_file = os.path.join(scripts_dir,'{:03d}'.format(routine_num)+'.txt')
-        for a in s.activities:
-            scripts_used[a.source[:a.source.index('(')]] += 1
+        if script_use_file is not None:
+            with open(script_use_file, 'a') as f:
+                for a in s.activities:
+                    f.write('\n' + a.source[:a.source.index('(')] + ';' + a.name + ';' + str(a.get_start_time()) + ';' + str(a.get_end_time()))
         
         with open(script_file, 'w') as f:
+            # try:
+            #     f.write(day+' schedule generated from '+s.schedule_file_path)
+            # except:
+            #     pass
             try:
-                f.write(day+' schedule generated from '+s.schedule_file_path)
-            except:
-                pass
-            try:
-                f.write('\nScripts used for this routine : \n'+'\n'.join([a.source for a in s.activities])+'\n\n\n')
+                f.write('Scripts used for this routine : \n'+'\n'.join([a.source for a in s.activities])+'\n\n\n')
             except:
                 pass
             f.write(script_string)
         print(f'Generated script {script_file}')
-        return ({'times':times,'graphs':graphs, 'objects_in_use':obj_in_use})
+        routine_out = ({'times':times,'graphs':graphs, 'objects_in_use':obj_in_use, 'important_objects':imp_obj})
+        routine_file = os.path.join(routines_dir,'{:03d}'.format(routine_num)+'.json')
+        with open(routine_file, 'w') as f:
+            json.dump(routine_out, f)
+        return routine_out
 
 
 def main():
     TEMP_DIR = 'data/sourcedRoutines/temp'
-    if os.path.exists(TEMP_DIR):
-        shutil.rmtree(TEMP_DIR)
-
-    os.makedirs(TEMP_DIR)
     scripts_train_dir = os.path.join(TEMP_DIR,'scripts_train')
     scripts_test_dir = os.path.join(TEMP_DIR,'scripts_test')
+    routines_raw_train_dir = os.path.join(TEMP_DIR,'raw_routines_train')
+    routines_raw_test_dir = os.path.join(TEMP_DIR,'raw_routines_test')
+    
+    global info
+    
+    if os.path.exists(TEMP_DIR):
+        shutil.rmtree(TEMP_DIR)
+    os.makedirs(TEMP_DIR)
     os.makedirs(scripts_train_dir)
     os.makedirs(scripts_test_dir)
+    os.makedirs(routines_raw_train_dir)
+    os.makedirs(routines_raw_test_dir)
 
-
-    data_train = []
+    # pool = multiprocessing.Pool()
     for routine_num in range(info['num_train_routines']):
-        data_train.append(make_routine(routine_num, scripts_train_dir))
-
-    data_test = []
+        make_routine(routine_num, scripts_train_dir, routines_raw_train_dir, os.path.join(TEMP_DIR,'script_usage.txt'), False)
+        # pool.apply_async(make_routine, args = (routine_num, scripts_train_dir, routines_raw_train_dir, os.path.join(TEMP_DIR,'script_usage_train.txt'), False))
     for routine_num in range(info['num_test_routines']):
-        data_test.append(make_routine(routine_num, scripts_test_dir))
+        make_routine(routine_num, scripts_test_dir, routines_raw_test_dir, os.path.join(TEMP_DIR,'script_usage.txt'), False)
+        # pool.apply_async(make_routine, args=(routine_num, scripts_test_dir, routines_raw_test_dir, os.path.join(TEMP_DIR,'script_usage_test.txt'), False))
+    # pool.close()
+    # pool.join()
 
-
+    use_per_script = {('_'.join(path.split('/')[-2:]))[:-4]:0 for path in glob.glob('data/sourcedScriptsByActivity/*/*.txt')}
+    activity_over_time = {act:{t:0 for t in np.arange(info['start_time'], info['end_time'], 5)} for act in activity_map.values()}
+    with open(os.path.join(TEMP_DIR,'script_usage.txt')) as f:
+        script_usage = f.read().split('\n')
+    for script_usage_info in script_usage:
+        if script_usage_info == '': continue
+        script, activity, start_time, end_time = script_usage_info.split(';')
+        use_per_script[script] += 1
+        for t in activity_over_time[activity]:
+            if t > float(start_time) and t < float(end_time):
+                activity_over_time[activity][t] += 1
+    
     fig, ax = plt.subplots()
     fig.set_size_inches(18.5, 10.5)
-    ax.bar(scripts_used.keys(), scripts_used.values())
+    ax.bar(use_per_script.keys(), use_per_script.values())
     _ = plt.xticks(rotation=90)
     _ = ax.set_title('Number of times each script is used in the dataset')
+    ax.legend()
     fig.tight_layout()
     plt.savefig(os.path.join(TEMP_DIR, 'script_usage_histogram.jpg'))
 
-    reference_full_graph = data_test[0]['graphs'][0]
 
-    ## update utilized objects to include complete tree
-    check_ids = utilized_object_ids
-    while len(check_ids) > 0:
-        next_check_ids = set()
-        for e in reference_full_graph['edges']:
-            if e['from_id'] in check_ids and e['relation_type'] in edge_classes:
-                utilized_object_ids.add(e['to_id'])
-                next_check_ids.add(e['to_id'])
-        check_ids = next_check_ids
+    num_act = len(activity_over_time)
+    fig, axs = plt.subplots(4, ceil(num_act/4))
+    fig.set_size_inches(18.5, 10.5)
+    axs = axs.reshape(-1)
+    for i,(activity, time_func) in enumerate(activity_over_time.items()):
+        if activity is None: continue
+        axs[i].bar(time_func.keys(), time_func.values())
+        axs[i].set_xticks([t for t in time_func.keys() if t%180==0])
+        axs[i].set_xticklabels([time_human(t) for t in time_func.keys() if t%180==0], rotation=90)
+        _ = axs[i].set_title(activity)
+    fig.tight_layout()
+    plt.savefig(os.path.join(TEMP_DIR, 'activity_time.jpg'))
 
-    for data in data_train:
-        data['graphs'] = remove_ignored_classes(data['graphs'])
-    with open(os.path.join(TEMP_DIR,'routines_train.json'), 'w') as f:
-        json.dump(data_train, f)
 
-    for data in data_test:
-        data['graphs'] = remove_ignored_classes(data['graphs'])
-    with open(os.path.join(TEMP_DIR,'routines_test.json'), 'w') as f:
-        json.dump(data_test, f)
+    with open(os.path.join(routines_raw_test_dir,'{:03d}'.format(0)+'.json')) as f:
+        reference_full_graph = json.load(f)['graphs'][0]
 
-    refercnce_graph = data_test[0]['graphs'][0]
+    utilized_object_ids = set()
+    # update utilized objects to include complete tree
+    if info['only_used_objects']:
+        for routine_num in range(info['num_train_routines']):
+            with open(os.path.join(routines_raw_train_dir,'{:03d}'.format(routine_num)+'.json')) as f:
+                utilized_object_ids.update(json.load(f)['important_objects'])
+        for routine_num in range(info['num_test_routines']):
+            with open(os.path.join(routines_raw_test_dir,'{:03d}'.format(routine_num)+'.json')) as f:
+                utilized_object_ids.update(json.load(f)['important_objects'])
+        check_ids = utilized_object_ids
+        while len(check_ids) > 0:
+            next_check_ids = set()
+            for e in reference_full_graph['edges']:
+                if e['from_id'] in check_ids and e['relation_type'] in edge_classes:
+                    utilized_object_ids.add(e['to_id'])
+                    next_check_ids.add(e['to_id'])
+            check_ids = next_check_ids
+
+
+
+    routines_train_dir = os.path.join(TEMP_DIR,'routines_train')
+    routines_test_dir = os.path.join(TEMP_DIR,'routines_test')
+    os.makedirs(routines_train_dir)
+    os.makedirs(routines_test_dir)
+
+
+    def postprocess(src_file, dest_file):
+        with open(src_file) as f:
+            datapoint = json.load(f)
+        del datapoint['important_objects']
+        datapoint['graphs'] = remove_ignored_classes(datapoint['graphs'], utilized_object_ids)
+        with open(dest_file, 'w') as f:
+            json.dump(datapoint, f)
+
+
+    # pool = multiprocessing.Pool()
+    for routine_num in range(info['num_train_routines']):
+        postprocess(os.path.join(routines_raw_train_dir,'{:03d}'.format(routine_num)+'.json'), os.path.join(routines_train_dir,'{:03d}'.format(routine_num)+'.json'))
+    #     pool.apply_async(postprocess, args = (os.path.join(routines_raw_train_dir,'{:03d}'.format(routine_num)+'.json'), os.path.join(routines_train_dir,'{:03d}'.format(routine_num)+'.json')))
+    for routine_num in range(info['num_test_routines']):
+        postprocess(os.path.join(routines_raw_test_dir,'{:03d}'.format(routine_num)+'.json'), os.path.join(routines_test_dir,'{:03d}'.format(routine_num)+'.json'))
+    #     pool.apply_async(postprocess, args = (os.path.join(routines_raw_test_dir,'{:03d}'.format(routine_num)+'.json'), os.path.join(routines_test_dir,'{:03d}'.format(routine_num)+'.json')))
+    # pool.close()
+    # pool.join()
+
+
+    with open(os.path.join(routines_test_dir,'{:03d}'.format(0)+'.json')) as f:
+        refercnce_graph = json.load(f)['graphs'][0]
 
     nodes = refercnce_graph['nodes']
     with open(os.path.join(TEMP_DIR,'classes.json'), 'w') as f:
