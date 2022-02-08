@@ -46,8 +46,10 @@ class ScheduleSampler():
         self.activity_histograms = {k:{s:0 for s in start_times} for k in activity_map.values()}
         self.schedule_num = 0
         for root, dirs, files in os.walk(data_dir):
-            f, self.ind_plot = plt.subplots(len(files), len(see_activities))
+            # f, self.ind_plot = plt.subplots(len(files), len(see_activities))
+            # f.set_size_inches(30, 15)
             self.scene_histogram = [None] * len(files)
+            files = [files[3],files[11], files[15], files[17]]
             for f in files:
                 if f.endswith('.json'):
                     with open(os.path.join(root,f)) as file:
@@ -56,10 +58,10 @@ class ScheduleSampler():
                     if write_to_file: 
                         with open(os.path.join('data/sourcedSchedules/weekday',f), 'w') as f:
                             json.dump(schedule_processed, f)
-                    self.ind_plot[self.schedule_num,0].set_ylabel(str(self.schedule_num))
+                    # self.ind_plot[self.schedule_num,0].set_ylabel(str(self.schedule_num))
                     self.schedule_num += 1
-        for i, act in enumerate(see_activities):
-            self.ind_plot[0,i].set_title(act)
+        # for i, act in enumerate(see_activities):
+            # self.ind_plot[0,i].set_title(act)
         running_sum = [0 for _ in start_times]
         self.activity_threshold = {s:{} for s in start_times}
         # self.fig = plt.plot()
@@ -96,7 +98,7 @@ class ScheduleSampler():
                     activity_times[sch_activity] = [start_time]
         for i, act in enumerate(see_activities):
             hist = self.scene_histogram[self.schedule_num][act]
-            self.ind_plot[self.schedule_num][i].bar(hist.keys(), hist.values())
+            # self.ind_plot[self.schedule_num][i].bar(hist.keys(), hist.values())
         schedule = {}
         for sch_activity, act_st in activity_times.items(): 
             if sch_activity is None:

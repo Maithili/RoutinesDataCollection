@@ -22,7 +22,7 @@ from GraphReader import GraphReader, init_graph_file, scene_num
 from ProgramExecutor import read_program
 from ScheduleSampler import ScheduleSampler, activity_map
 
-DATASET_DIR = 'data/sourcedRoutines/mcsample0207'
+DATASET_DIR = 'data/sourcedRoutines/mc4schedules0208'
 
 random.seed(123)
 def time_mins(mins, hrs, day=0):
@@ -48,8 +48,8 @@ print(f'Using scene {int(scene_num)-1}, i.e. \'TestScene{scene_num}\'')
 
 info = {}
 info['dt'] = 10   # minutes
-info['num_train_routines'] = 10
-info['num_test_routines'] = 2
+info['num_train_routines'] = 50
+info['num_test_routines'] = 10
 info['weekend_days'] = []   #[day_num(day) for day in ['Saturday','Sunday']]
 info['start_time'] = time_mins(mins=0, hrs=6)
 info['end_time'] = time_mins(mins=0, hrs=24)
@@ -59,7 +59,7 @@ info['graphs_dt_apart'] = False
 
 
 # info['max_activities_per_day'] = 7
-info['schedule_sampler_filter_num'] = 3 
+info['schedule_sampler_filter_num'] = 0 
 info['idle_sampling_factor'] = 1.0
 
 info['breakfast_only'] = False
@@ -421,15 +421,15 @@ def main():
     os.makedirs(routines_raw_train_dir)
     os.makedirs(routines_raw_test_dir)
 
-    # pool = multiprocessing.Pool()
+    pool = multiprocessing.Pool()
     for routine_num in range(info['num_train_routines']):
-        make_routine(routine_num, scripts_train_dir, routines_raw_train_dir, os.path.join(TEMP_DIR,'script_usage.txt'), False)
-        # pool.apply_async(make_routine, args = (routine_num, scripts_train_dir, routines_raw_train_dir, os.path.join(TEMP_DIR,'script_usage_train.txt'), False))
+        # make_routine(routine_num, scripts_train_dir, routines_raw_train_dir, os.path.join(TEMP_DIR,'script_usage.txt'), False)
+        pool.apply_async(make_routine, args = (routine_num, scripts_train_dir, routines_raw_train_dir, os.path.join(TEMP_DIR,'script_usage.txt'), False))
     for routine_num in range(info['num_test_routines']):
-        make_routine(routine_num, scripts_test_dir, routines_raw_test_dir, os.path.join(TEMP_DIR,'script_usage.txt'), False)
-        # pool.apply_async(make_routine, args=(routine_num, scripts_test_dir, routines_raw_test_dir, os.path.join(TEMP_DIR,'script_usage_test.txt'), False))
-    # pool.close()
-    # pool.join()
+        # make_routine(routine_num, scripts_test_dir, routines_raw_test_dir, os.path.join(TEMP_DIR,'script_usage.txt'), False)
+        pool.apply_async(make_routine, args=(routine_num, scripts_test_dir, routines_raw_test_dir, os.path.join(TEMP_DIR,'script_usage.txt'), False))
+    pool.close()
+    pool.join()
 
     use_per_script = {('_'.join(path.split('/')[-2:]))[:-4]:0 for path in glob.glob('data/sourcedScriptsByActivity/*/*.txt')}
     activity_over_time = {act:{t:0 for t in np.arange(info['start_time'], info['end_time'], 5)} for act in activity_map.values()}
