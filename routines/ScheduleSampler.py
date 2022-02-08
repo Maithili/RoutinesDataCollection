@@ -39,11 +39,15 @@ activity_map = {
 }
 start_times = [6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
 
+see_activities = ["brushing_teeth", "showering", "breakfast", "lunch", "dinner", "taking_medication", "getting_dressed", "computer_work", "leaving_home_and_coming_back", "laundry", "socializing"]
 
 class ScheduleSampler():
     def __init__(self, data_dir='data/AMT_Schedules', write_to_file=False, filter_num = 3, idle_sampling_factor = 1.0):
         self.activity_histograms = {k:{s:0 for s in start_times} for k in activity_map.values()}
+        self.schedule_num = 0
         for root, dirs, files in os.walk(data_dir):
+            f, self.ind_plot = plt.subplots(len(files), len(see_activities))
+            self.scene_histogram = [None] * len(files)
             for f in files:
                 if f.endswith('.json'):
                     with open(os.path.join(root,f)) as file:
@@ -52,6 +56,10 @@ class ScheduleSampler():
                     if write_to_file: 
                         with open(os.path.join('data/sourcedSchedules/weekday',f), 'w') as f:
                             json.dump(schedule_processed, f)
+                    self.ind_plot[self.schedule_num,0].set_ylabel(str(self.schedule_num))
+                    self.schedule_num += 1
+        for i, act in enumerate(see_activities):
+            self.ind_plot[0,i].set_title(act)
         running_sum = [0 for _ in start_times]
         self.activity_threshold = {s:{} for s in start_times}
         # self.fig = plt.plot()
@@ -72,6 +80,7 @@ class ScheduleSampler():
     
     def _get_schedule(self, data):
         activity_times = {}
+        self.scene_histogram[self.schedule_num] = {k:{s:0 for s in start_times} for k in activity_map.values()}
         for timestring,activities in data.items():
             start_time = timestring.split('m')[0]
             start_time = int(start_time[:-1]) if start_time[-1] == 'a' else int(start_time[:-1])+12
@@ -80,16 +89,20 @@ class ScheduleSampler():
             for act in activities:
                 sch_activity = activity_map[act]
                 self.activity_histograms[sch_activity][start_time] += 1
+                self.scene_histogram[self.schedule_num][sch_activity][start_time] += 1
                 if sch_activity in activity_times:
                     activity_times[sch_activity].append(start_time)
                 else:
                     activity_times[sch_activity] = [start_time]
+        for i, act in enumerate(see_activities):
+            hist = self.scene_histogram[self.schedule_num][act]
+            self.ind_plot[self.schedule_num][i].bar(hist.keys(), hist.values())
         schedule = {}
-        for sch_activity, start_times in activity_times.items(): 
+        for sch_activity, act_st in activity_times.items(): 
             if sch_activity is None:
                 continue
-            schedule[sch_activity] = [[start_times[0], start_times[0]+1]]
-            for time in start_times[1:]:
+            schedule[sch_activity] = [[act_st[0], act_st[0]+1]]
+            for time in act_st[1:]:
                 if schedule[sch_activity][-1][1] == time:
                     schedule[sch_activity][-1][1] = time+1
                 else:
