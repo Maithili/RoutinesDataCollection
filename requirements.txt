@@ -12,3 +12,5 @@ networkx==2.3
 matplotlib
 IPython
 chart_studio
+seaborn
+scikit-learn
