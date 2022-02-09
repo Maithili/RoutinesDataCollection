@@ -22,7 +22,6 @@ activity_map = {
 "take_medication" : "taking_medication",
 "prepare_eat_dinner" : "dinner",
 "connect_w_friends" : "socializing",
-"diary_journaling" : None,
 "hand_wash_clothes" : "laundry",
 "listen_to_music" : "listening_to_music",
 "clean" : "cleaning",
@@ -34,6 +33,7 @@ activity_map = {
 "wash_dishes" : "wash_dishes",
 "watch_tv" : "watching_tv",
 ## unnecessary
+"diary_journaling" : None,
 "wake_up" : None,
 "sleep" : None,
 }
@@ -41,17 +41,19 @@ start_times = [6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
 
 see_activities = ["brushing_teeth", "showering", "breakfast", "lunch", "dinner", "taking_medication", "getting_dressed", "computer_work", "leaving_home_and_coming_back", "laundry", "socializing"]
 see_activities = list(set(activity_map.values()))
+see_activities.remove(None)
 
 class ScheduleSampler():
     def __init__(self, data_dir='data/AMT_Schedules', write_to_file=False, filter_num = 3, idle_sampling_factor = 1.0):
         self.activity_histograms = {k:{s:0 for s in start_times} for k in activity_map.values()}
         self.schedule_num = 0
         for root, dirs, files in os.walk(data_dir):
-            f, self.ind_plot = plt.subplots(len(files), len(see_activities))
-            f.set_size_inches(40, 30)
+            fig, self.ind_plot = plt.subplots(len(files)-4, len(see_activities), sharey=True, sharex=True)
+            fig.set_size_inches(50, 25)
             self.scene_histogram = [None] * len(files)
-            # files = [files[3],files[11], files[15], files[17]]
             for f in files:
+                if f in ['A3EF9IKIU8IAHY.json', 'A3FKOG3VU5MP0X.json','AFER49XXMM4PE.json','A332L3FO6RCY6G.json']:
+                    continue
                 if f.endswith('.json'):
                     with open(os.path.join(root,f)) as file:
                         sch = json.load(file)
@@ -59,13 +61,13 @@ class ScheduleSampler():
                     if write_to_file: 
                         with open(os.path.join('data/sourcedSchedules/weekday',f), 'w') as f:
                             json.dump(schedule_processed, f)
-                    self.ind_plot[self.schedule_num,0].set_ylabel(f[:6])
+                    # self.ind_plot[self.schedule_num,0].set_ylabel(f[:6])
                     self.schedule_num += 1
         for i, act in enumerate(see_activities):
             self.ind_plot[0,i].set_title(act)
         running_sum = [0 for _ in start_times]
         self.activity_threshold = {s:{} for s in start_times}
-        # self.fig = plt.plot()
+        fig.tight_layout()
         # plt.rcParams["figure.figsize"] = (27, 18.5)
         self.filter_num = filter_num
         for act, freq in self.activity_histograms.items():
@@ -86,14 +88,16 @@ class ScheduleSampler():
         if gender == 'Male': c = [0, 0, age/60]
         # self.ind_plot[self.schedule_num,0].set_ylabel(str(age) + ', '+gender[0])
         activity_times = {}
-        self.scene_histogram[self.schedule_num] = {k:{s:0 for s in start_times} for k in activity_map.values()}
+        self.scene_histogram[self.schedule_num] = {k:{s:0 for s in start_times} for k in see_activities}
         for timestring,activities in data.items():
             start_time = timestring.split('m')[0]
             start_time = int(start_time[:-1]) if start_time[-1] == 'a' else int(start_time[:-1])+12
             if start_time == 24:
                 start_time = 12
-            for act in activities:
+            for act in set(activities):
                 sch_activity = activity_map[act]
+                if sch_activity is None:
+                    continue
                 self.activity_histograms[sch_activity][start_time] += 1
                 self.scene_histogram[self.schedule_num][sch_activity][start_time] += 1
                 if sch_activity in activity_times:
@@ -103,10 +107,10 @@ class ScheduleSampler():
         for i, act in enumerate(see_activities):
             hist = self.scene_histogram[self.schedule_num][act]
             self.ind_plot[self.schedule_num][i].bar(hist.keys(), hist.values(), color=c)
+            self.ind_plot[self.schedule_num][i].set_xticks([6,9,12,15,18,21,24])
+            self.ind_plot[self.schedule_num][i].set_xticklabels(['6:00','','12:00','','18:00','','24:00'])
         schedule = {}
         for sch_activity, act_st in activity_times.items(): 
-            if sch_activity is None:
-                continue
             schedule[sch_activity] = [[act_st[0], act_st[0]+1]]
             for time in act_st[1:]:
                 if schedule[sch_activity][-1][1] == time:
@@ -147,4 +151,5 @@ class ScheduleSampler():
             sample -= filtered_freq
         raise RuntimeError('This should not happen!')
 
-
+    def reset(self):
+        self.removed_activities = []

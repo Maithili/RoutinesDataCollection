@@ -20,11 +20,12 @@ from evolving_graph.environment import EnvironmentGraph
 
 from GraphReader import GraphReader, init_graph_file, scene_num
 from ProgramExecutor import read_program
-from ScheduleSampler import ScheduleSampler, activity_map
+from ScheduleDistributionSampler import ScheduleDistributionSampler, activity_map
 
 DATASET_DIR = 'data/sourcedRoutines/mc4schedules0208'
 
-random.seed(123)
+random.seed(1524)
+
 def time_mins(mins, hrs, day=0):
     return (((day)*24)+hrs)*60+mins
 
@@ -48,8 +49,8 @@ print(f'Using scene {int(scene_num)-1}, i.e. \'TestScene{scene_num}\'')
 
 info = {}
 info['dt'] = 10   # minutes
-info['num_train_routines'] = 50
-info['num_test_routines'] = 10
+info['num_train_routines'] = 5
+info['num_test_routines'] = 1
 info['weekend_days'] = []   #[day_num(day) for day in ['Saturday','Sunday']]
 info['start_time'] = time_mins(mins=0, hrs=6)
 info['end_time'] = time_mins(mins=0, hrs=24)
@@ -189,7 +190,9 @@ class Schedule():
     
 class ScheduleFromHistogram(Schedule):
     def __init__(self, type=None):
-        sampler = ScheduleSampler(filter_num=info['schedule_sampler_filter_num'], idle_sampling_factor=info['idle_sampling_factor'])
+        sampler = ScheduleDistributionSampler(type='individual')
+        if not os.path.exists('data/sourcedRoutines/temp/schedule_distribution.jpg'):
+            sampler.plot('data/sourcedRoutines/temp/schedule_distribution.jpg')
         if info['breakfast_only']:
             t = sampler.sample_time_for('breakfast')
             self.activities = [Activity('breakfast', time_start_mins=t, stack_actions=True)]
@@ -200,7 +203,7 @@ class ScheduleFromHistogram(Schedule):
             self.activities = []
             t = info['start_time']
             while t < info['end_time']:
-                activity_name = sampler(t, remove=True)
+                activity_name = sampler(t, remove=False)
                 if activity_name is None:
                     t += info['dt']
                     continue
@@ -423,11 +426,11 @@ def main():
 
     pool = multiprocessing.Pool()
     for routine_num in range(info['num_train_routines']):
-        # make_routine(routine_num, scripts_train_dir, routines_raw_train_dir, os.path.join(TEMP_DIR,'script_usage.txt'), False)
-        pool.apply_async(make_routine, args = (routine_num, scripts_train_dir, routines_raw_train_dir, os.path.join(TEMP_DIR,'script_usage.txt'), False))
+        make_routine(routine_num, scripts_train_dir, routines_raw_train_dir, os.path.join(TEMP_DIR,'script_usage.txt'), False)
+        # pool.apply_async(make_routine, args = (routine_num, scripts_train_dir, routines_raw_train_dir, os.path.join(TEMP_DIR,'script_usage.txt'), False))
     for routine_num in range(info['num_test_routines']):
-        # make_routine(routine_num, scripts_test_dir, routines_raw_test_dir, os.path.join(TEMP_DIR,'script_usage.txt'), False)
-        pool.apply_async(make_routine, args=(routine_num, scripts_test_dir, routines_raw_test_dir, os.path.join(TEMP_DIR,'script_usage.txt'), False))
+        make_routine(routine_num, scripts_test_dir, routines_raw_test_dir, os.path.join(TEMP_DIR,'script_usage.txt'), False)
+        # pool.apply_async(make_routine, args=(routine_num, scripts_test_dir, routines_raw_test_dir, os.path.join(TEMP_DIR,'script_usage.txt'), False))
     pool.close()
     pool.join()
 
