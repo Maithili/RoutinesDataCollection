@@ -1,4 +1,5 @@
 ## 0-1
+[Walk] <outside>
 [Find] <groceries>
 [Grab] <groceries>
 [Find] <mail>
@@ -7,15 +8,18 @@
 ## 3-5
 [Walk] <dining_room>
 [Find] <cupboard>
+[Putback] <mail> <cupboard>
 [Open] <cupboard>
 [Putin] <groceries> <cupboard>
 [Close] <cupboard>
 
-
+## 3-5
 [Walk] <dining_room>
 [Find] <cupboard>
 [Walk] <cupboard>
 [Open] <cupboard>
+[Find] <mail>
+[Grab] <mail>
 [Putin] <mail> <cupboard>
 [Close] <cupboard>
 

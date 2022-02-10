@@ -16,7 +16,7 @@ activity_map = {
 "computer_work" : "computer_work",
 "prepare_eat_lunch" : "lunch",
 "leave_home" : "leave_home",
-"come_home" : "come_back",
+"come_home" : "come_home",
 "play_music" : "playing_music",
 "read" : "reading",
 "take_medication" : "taking_medication",

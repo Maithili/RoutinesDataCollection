@@ -1,3 +1,4 @@
+from argparse import ArgumentError
 import random
 import json
 from math import floor
@@ -11,7 +12,7 @@ personas = {}
 # persona_traits = {
 # 'leaving_home_and_coming_back': {"short" : [], "full_workday" : [], "never":[]}, 
 # 'leave_home': {"early" : [], "late" : [], "at_night" : [], "multiple_times": [], "never":[]}, 
-# 'come_back': {"early" : [], "late" : [], "at_night" : [], "multiple_times": [], "never":[]}, 
+# 'come_home': {"early" : [], "late" : [], "at_night" : [], "multiple_times": [], "never":[]}, 
 # 'playing_music': {"morning":[], "evening":[], "multiple_times":[], "not_at_all":[]}, 
 # 'getting_dressed': {"for_work":[], "for_evening":[], "morning_andEvening":[], "not_at_all":[]}, 
 # 'cleaning': {"morning":[], "evening":[], "multiple_times":[], "not_at_all":[]}, 
@@ -37,9 +38,9 @@ personas = {}
 
 
 # early riser, works long hours, has less time for chores
-personas['hard worker'] = {
+personas['hard_worker'] = {
     'leave_home' : 'early',
-    'come_back' : 'late',
+    'come_home' : 'late',
     'playing_music' : 'not_at_all',
     'getting_dressed' : 'for_work',
     'cleaning' : 'evening',
@@ -63,9 +64,9 @@ personas['hard worker'] = {
 }
 
 # early riser, works from home, enjoys evenings with tv, music and friends 
-personas['work from home'] = {
+personas['work_from_home'] = {
     'leave_home' : 'never',
-    'come_back' : 'never',
+    'come_home' : 'never',
     'playing_music' : 'evening',
     'getting_dressed' : 'for_evening',
     'cleaning' : 'evening',
@@ -89,9 +90,9 @@ personas['work from home'] = {
 }
 
 # home maker, less computer work, lots of chores, enjoys evenings with tv, music and friends 
-personas['home maker'] = {
+personas['home_maker'] = {
     'leave_home' : 'late',
-    'come_back' : 'late',
+    'come_home' : 'late',
     'playing_music' : 'evening',
     'getting_dressed' : 'for_evening',
     'cleaning' : 'evening',
@@ -115,9 +116,9 @@ personas['home maker'] = {
 }
 
 # elderly, less work and no going out, sparsely indulges in leisurely activities 
-personas['elderly'] = {
+personas['senior'] = {
     'leave_home' : 'never',
-    'come_back' : 'never',
+    'come_home' : 'never',
     'playing_music' : 'evening',
     'getting_dressed' : 'not_at_all',
     'cleaning' : 'not_at_all',
@@ -140,6 +141,10 @@ personas['elderly'] = {
     'watching_tv' : 'evening',
 }
 
+persona_options = list(personas.keys())
+with open('data/personaBasedSchedules/individual_histograms.json') as f:
+    individual_histograms = json.load(f)
+    individual_options = list(individual_histograms.keys())
 
 activity_map = {
 "brush_teeth" : "brushing_teeth",
@@ -149,7 +154,7 @@ activity_map = {
 "computer_work" : "computer_work",
 "prepare_eat_lunch" : "lunch",
 "leave_home" : "leave_home",
-"come_home" : "come_back",
+"come_home" : "come_home",
 "play_music" : "playing_music",
 "read" : "reading",
 "take_medication" : "taking_medication",
@@ -173,55 +178,62 @@ activity_map = {
 start_times = [6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
 
 class ScheduleDistributionSampler():
-    def __init__(self, type):
-        activity_histogram = {}
-        if type.lower() == 'persona':
-            with open('data/personaBasedSchedules/trait_histograms.json') as f:
-                trait_histograms = json.load(f)
-            persona_name = random.choice(list(personas.keys()))
+    def __init__(self, type, idle_sampling_factor=1.0, resample_after=float("inf")):
+        self.activity_histogram = {}
+        with open('data/personaBasedSchedules/trait_histograms.json') as f:
+            trait_histograms = json.load(f)
+        with open('data/personaBasedSchedules/individual_histograms.json') as f:
+            individual_histograms = json.load(f)
+        if type.upper() in individual_histograms.keys():
+            self.label = type.upper()
+            self.activity_histogram = np.array(individual_histograms[type.upper()])
+        elif type.lower() in personas.keys():
+            persona_name = type.lower()
             self.label = persona_name
             persona = personas[persona_name]
             for activity in persona:
                 try:
-                    activity_histogram[activity] = trait_histograms[activity][persona[activity]]
+                    self.activity_histogram[activity] = np.array(trait_histograms[activity][persona[activity]])
                 except Exception as e:
                     print(activity, persona_name)
                     raise e
-        elif type.lower() == 'individual':
-            with open('data/personaBasedSchedules/individual_histograms.json') as f:
-                individual_histograms = json.load(f)
-            person = random.choice(list(individual_histograms.keys()))
-            self.label = person
-            activity_histogram = individual_histograms[person]
         else:
-            raise NotImplementedError('Only persona and individual schdule samplers have been implemented')
+            raise ArgumentError(f'Unknown value {type} for Schedule Sampler')
         
-        self.activities = list(activity_histogram.keys())
-        self.activity_threshold = np.zeros((len(self.activities)+1, len(start_times)))
-        for i, activity in enumerate(self.activities):
-            self.activity_threshold[i+1,:] = self.activity_threshold[i,:] + np.array(activity_histogram[activity])
-        self.activity_threshold = self.activity_threshold[1:,:]
-        self.sampling_range = max(self.activity_threshold[-1,:]) * 1.2
-        self.removed_activities = []
-        self.next_activity_must_be_one_of = []
+        self.activities = list(self.activity_histogram.keys())
+        self.activities.remove("come_home")
+        self.sampling_range = max(sum([np.array(self.activity_histogram[activity]) for activity in self.activities])) * idle_sampling_factor
+        self.resample_after = resample_after
+        self.left_house = True
 
-    def __call__(self, t_mins, remove=False):
+    def __call__(self, t_mins):
+        st_idx = start_times.index(int(floor(t_mins/60)))
+        if self.left_house:
+            remaining_probs = self.activity_histogram["come_home"][st_idx:]
+            sample = random.random()*sum(remaining_probs)
+            if remaining_probs[0] > sample:
+                self.left_house = False
+                return "come_home"
+            else:
+                return None
         sample = random.random()*self.sampling_range
         activity = None
-        st = start_times.index(int(floor(t_mins/60)))
-        for act, thresh in zip(self.activities, list(self.activity_threshold[:,st])):
+        for act in self.activities:
+            thresh = self.activity_histogram[act][st_idx]
             if thresh > sample:
                 activity = act
                 break
-        if activity in self.removed_activities:
-            return None
-        if self.next_activity_must_be_one_of and activity not in self.next_activity_must_be_one_of:
-            return None
-        else:
-            if remove: self.remove(activity)
+            sample -= thresh
+        self.update_distributions(st_idx, activity)
         if activity == "leave_home":
-            self.next_activity_must_be_one_of = ["come_home"]
+            self.left_house = True
         return activity
+
+    def update_distributions(self, st_idx, activity):
+        if activity is None:
+            return
+        end_idx = min(st_idx+self.resample_after, len(start_times))
+        self.activity_histogram[activity][st_idx:end_idx] *= 0
 
     def remove(self, activity):
         self.removed_activities.append(activity)
@@ -230,13 +242,10 @@ class ScheduleDistributionSampler():
         # clrs = sns.color_palette("pastel") + sns.color_palette("dark") + sns.color_palette()
         fig, ax = plt.subplots()
         fig.set_size_inches(27, 18.5)
-        base = self.activity_threshold[0,:] * 0
-        for i, activity in enumerate(self.activities):
-            self.activity_threshold[i,:]
-            d = self.activity_threshold[i,:] - base
-            # ax.bar(start_times, d, label=activity, bottom=base, color=clrs[i])
-            ax.bar(start_times, d, label=activity, bottom=base)
-            base = self.activity_threshold[i,:]
+        base = np.zeros_like(self.activity_histogram[self.activities[0]])
+        for activity in self.activities:         
+            ax.bar(start_times, self.activity_histogram[activity], label=activity, bottom=base)
+            base += self.activity_histogram[activity]
         ax.set_xticks(start_times)
         ax.set_xticklabels([str(s)+':00' for s in start_times])
         ax.set_title(self.label)

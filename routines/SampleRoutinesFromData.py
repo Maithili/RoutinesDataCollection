@@ -4,12 +4,15 @@ import json
 import os
 import glob
 import shutil
+import argparse
 from math import ceil
 import numpy as np
 import matplotlib.pyplot as plt
 import random
 import multiprocessing
 import sys
+
+from sklearn.utils import resample
 sys.path.append('..')
 sys.path.append('../simulation')
 
@@ -20,11 +23,9 @@ from evolving_graph.environment import EnvironmentGraph
 
 from GraphReader import GraphReader, init_graph_file, scene_num
 from ProgramExecutor import read_program
-from ScheduleDistributionSampler import ScheduleDistributionSampler, activity_map
+from ScheduleDistributionSampler import ScheduleDistributionSampler, activity_map, persona_options, individual_options
 
-DATASET_DIR = 'data/sourcedRoutines/mc4schedules0208'
-
-random.seed(1524)
+random.seed(23424)
 
 def time_mins(mins, hrs, day=0):
     return (((day)*24)+hrs)*60+mins
@@ -49,8 +50,8 @@ print(f'Using scene {int(scene_num)-1}, i.e. \'TestScene{scene_num}\'')
 
 info = {}
 info['dt'] = 10   # minutes
-info['num_train_routines'] = 5
-info['num_test_routines'] = 1
+info['num_train_routines'] = 50
+info['num_test_routines'] = 10
 info['weekend_days'] = []   #[day_num(day) for day in ['Saturday','Sunday']]
 info['start_time'] = time_mins(mins=0, hrs=6)
 info['end_time'] = time_mins(mins=0, hrs=24)
@@ -59,9 +60,10 @@ info['only_used_objects'] = True
 info['graphs_dt_apart'] = False
 
 
-# info['max_activities_per_day'] = 7
+info['min_activities'] = 4
 info['schedule_sampler_filter_num'] = 0 
 info['idle_sampling_factor'] = 1.0
+info['block_activity_for_hrs'] = 3
 
 info['breakfast_only'] = False
 info['single_script_only'] = False
@@ -189,10 +191,8 @@ class Schedule():
 #         self.activities = self.activities[:num_activities]
     
 class ScheduleFromHistogram(Schedule):
-    def __init__(self, type=None):
-        sampler = ScheduleDistributionSampler(type='individual')
-        if not os.path.exists('data/sourcedRoutines/temp/schedule_distribution.jpg'):
-            sampler.plot('data/sourcedRoutines/temp/schedule_distribution.jpg')
+    def __init__(self, sampler_name, type=None):
+        sampler = ScheduleDistributionSampler(type=sampler_name, idle_sampling_factor=info['idle_sampling_factor'], resample_after=info['block_activity_for_hrs'])
         if info['breakfast_only']:
             t = sampler.sample_time_for('breakfast')
             self.activities = [Activity('breakfast', time_start_mins=t, stack_actions=True)]
@@ -203,7 +203,7 @@ class ScheduleFromHistogram(Schedule):
             self.activities = []
             t = info['start_time']
             while t < info['end_time']:
-                activity_name = sampler(t, remove=False)
+                activity_name = sampler(t)
                 if activity_name is None:
                     t += info['dt']
                     continue
@@ -221,7 +221,9 @@ class ScheduleFromHistogram(Schedule):
             # if not first_activity_done:
             #     raise SamplingFailure('Histogram sampler could not sample {first_activity}')
             # raise SamplingFailure('Histogram sampler could not sample {last_activity}')
-
+            if len(self.activities) < info['min_activities']:
+                need = info['min_activities']
+                raise SamplingFailure(f'Could not sample enough activities. Sampled {len(self.activities)} need at least {need}')
 
 # %% run and get graphs
 
@@ -259,7 +261,13 @@ def get_graphs(all_actions, verbose=False):
     executor = ScriptExecutor(EnvironmentGraph(init_graph_dict), name_equivalence)
     success, _, graph_list = executor.execute(Script(complete_script_lines), w_graph_list=True)
     if not success:
-        raise SamplingFailure('Execution of {} starting at {} failed because {}'.format(action['name'], action['time_from_h'], executor.info.get_error_string()))
+        script_info = ''
+        try:
+            for n in range(len(graph_list)-3, len(graph_list)+3):
+                script_info += ('\n## Executing '+all_actions[n]['name']+' from '+all_actions[n]['time_from_h']+' to '+all_actions[n]['time_to_h']+' using '+str(all_actions[n]['script']))
+        except:
+            pass
+        raise SamplingFailure('Execution of following failed because {}... {}'.format(executor.info.get_error_string(), script_info))
     
     graphs = [EnvironmentGraph(init_graph_dict).to_dict()]
     times = []
@@ -370,13 +378,13 @@ def get_used_objects(g1,g2):
     return utilized_object_ids
 
 # %% Make a routine
-def make_routine(routine_num, scripts_dir, routines_dir, script_use_file=None, verbose=False):
+def make_routine(routine_num, scripts_dir, routines_dir, sampler_name, script_use_file=None, verbose=False):
     while True:
-        day = np.random.choice(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'])
-        day_number = day_num(day)
-        day_type = 'weekend' if day_number in info['weekend_days'] else 'weekday'
+        # day = np.random.choice(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'])
+        # day_number = day_num(day)
+        # day_type = 'weekend' if day_number in info['weekend_days'] else 'weekday'
         try:
-            s = ScheduleFromHistogram(day_type)
+            s = ScheduleFromHistogram(sampler_name)
             actions = s.get_combined_script()
             graphs, times, obj_in_use, script_string, imp_obj = get_graphs(actions)
         except SamplingFailure as sf:
@@ -407,36 +415,36 @@ def make_routine(routine_num, scripts_dir, routines_dir, script_use_file=None, v
         return routine_out
 
 
-def main():
-    TEMP_DIR = 'data/sourcedRoutines/temp'
-    scripts_train_dir = os.path.join(TEMP_DIR,'scripts_train')
-    scripts_test_dir = os.path.join(TEMP_DIR,'scripts_test')
-    routines_raw_train_dir = os.path.join(TEMP_DIR,'raw_routines_train')
-    routines_raw_test_dir = os.path.join(TEMP_DIR,'raw_routines_test')
+def main(sampler_name, output_directory):
+    scripts_train_dir = os.path.join(output_directory,'scripts_train')
+    scripts_test_dir = os.path.join(output_directory,'scripts_test')
+    routines_raw_train_dir = os.path.join(output_directory,'raw_routines_train')
+    routines_raw_test_dir = os.path.join(output_directory,'raw_routines_test')
     
     global info
     
-    if os.path.exists(TEMP_DIR):
-        shutil.rmtree(TEMP_DIR)
-    os.makedirs(TEMP_DIR)
+    os.makedirs(output_directory)
     os.makedirs(scripts_train_dir)
     os.makedirs(scripts_test_dir)
     os.makedirs(routines_raw_train_dir)
     os.makedirs(routines_raw_test_dir)
 
+    sampler = ScheduleDistributionSampler(type=sampler_name)
+    sampler.plot(os.path.join(output_directory,'schedule_distribution.jpg'))
+
     pool = multiprocessing.Pool()
     for routine_num in range(info['num_train_routines']):
-        make_routine(routine_num, scripts_train_dir, routines_raw_train_dir, os.path.join(TEMP_DIR,'script_usage.txt'), False)
-        # pool.apply_async(make_routine, args = (routine_num, scripts_train_dir, routines_raw_train_dir, os.path.join(TEMP_DIR,'script_usage.txt'), False))
+        make_routine(routine_num, scripts_train_dir, routines_raw_train_dir, sampler_name, os.path.join(output_directory,'script_usage.txt'), False)
+        # pool.apply_async(make_routine, args = (routine_num, scripts_train_dir, routines_raw_train_dir, sampler_name, os.path.join(output_directory,'script_usage.txt'), False))
     for routine_num in range(info['num_test_routines']):
-        make_routine(routine_num, scripts_test_dir, routines_raw_test_dir, os.path.join(TEMP_DIR,'script_usage.txt'), False)
-        # pool.apply_async(make_routine, args=(routine_num, scripts_test_dir, routines_raw_test_dir, os.path.join(TEMP_DIR,'script_usage.txt'), False))
+        make_routine(routine_num, scripts_test_dir, routines_raw_test_dir, sampler_name, os.path.join(output_directory,'script_usage.txt'), False)
+        # pool.apply_async(make_routine, args=(routine_num, scripts_test_dir, routines_raw_test_dir, sampler_name, os.path.join(output_directory,'script_usage.txt'), False))
     pool.close()
     pool.join()
 
     use_per_script = {('_'.join(path.split('/')[-2:]))[:-4]:0 for path in glob.glob('data/sourcedScriptsByActivity/*/*.txt')}
     activity_over_time = {act:{t:0 for t in np.arange(info['start_time'], info['end_time'], 5)} for act in activity_map.values()}
-    with open(os.path.join(TEMP_DIR,'script_usage.txt')) as f:
+    with open(os.path.join(output_directory,'script_usage.txt')) as f:
         script_usage = f.read().split('\n')
     for script_usage_info in script_usage:
         if script_usage_info == '': continue
@@ -453,7 +461,7 @@ def main():
     _ = ax.set_title('Number of times each script is used in the dataset')
     ax.legend()
     fig.tight_layout()
-    plt.savefig(os.path.join(TEMP_DIR, 'script_usage_histogram.jpg'))
+    plt.savefig(os.path.join(output_directory, 'script_usage_histogram.jpg'))
 
 
     num_act = len(activity_over_time)
@@ -466,8 +474,9 @@ def main():
         axs[i].set_xticks([t for t in time_func.keys() if t%180==0])
         axs[i].set_xticklabels([time_human(t) for t in time_func.keys() if t%180==0], rotation=90)
         _ = axs[i].set_title(activity)
+    fig.suptitle(sampler_name)
     fig.tight_layout()
-    plt.savefig(os.path.join(TEMP_DIR, 'activity_time.jpg'))
+    plt.savefig(os.path.join(output_directory, 'activity_time.jpg'))
 
 
     with open(os.path.join(routines_raw_test_dir,'{:03d}'.format(0)+'.json')) as f:
@@ -493,8 +502,8 @@ def main():
 
 
 
-    routines_train_dir = os.path.join(TEMP_DIR,'routines_train')
-    routines_test_dir = os.path.join(TEMP_DIR,'routines_test')
+    routines_train_dir = os.path.join(output_directory,'routines_train')
+    routines_test_dir = os.path.join(output_directory,'routines_test')
     os.makedirs(routines_train_dir)
     os.makedirs(routines_test_dir)
 
@@ -523,7 +532,7 @@ def main():
         refercnce_graph = json.load(f)['graphs'][0]
 
     nodes = refercnce_graph['nodes']
-    with open(os.path.join(TEMP_DIR,'classes.json'), 'w') as f:
+    with open(os.path.join(output_directory,'classes.json'), 'w') as f:
         json.dump({"nodes":nodes, "edges":edge_classes}, f)
 
     info['num_nodes'] = len(nodes)
@@ -532,32 +541,38 @@ def main():
     info['search_object_names'] = [n['class_name'] for n in search_objects]
     for k,v in info.items():
         print(k,' : ',v)
-    with open(os.path.join(TEMP_DIR,'info.json'), 'w') as f:
+    with open(os.path.join(output_directory,'info.json'), 'w') as f:
         json.dump(info, f)
-
-    global DATASET_DIR
-
-    if os.path.exists(DATASET_DIR):
-        shutil.rmtree(DATASET_DIR)
-    shutil.move(TEMP_DIR, DATASET_DIR)
-
-
-    DESTINATION_DIR = os.path.join('../../SpatioTemporalObjectTracking/data/',os.path.basename(DATASET_DIR))
-
-    if not os.path.exists(DESTINATION_DIR):
-        shutil.copytree(DATASET_DIR, DESTINATION_DIR)
-        print('Successfully copied to ',DESTINATION_DIR)
-    else:
-        overwrite = input(DESTINATION_DIR+' already exists. Do you want to overwrite it? (y/n)')
-        if overwrite:
-            shutil.rmtree(DESTINATION_DIR)
-            shutil.copytree(DATASET_DIR, DESTINATION_DIR)
-            print('Successfully copied to ',DESTINATION_DIR)
-        else:
-            print('Skipping copy')
-
 
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Run model on routines.')
+    parser.add_argument('--path', type=str, default='data/generated_routine', help='Directory to output data in')
+    parser.add_argument('--sampler', type=str, help='Name of schedule sampler to use. This can be \'persona\', \'individual\' or an individual ID or persona name')
+    parser.add_argument('--loop_through_all', action='store_true', help='Set this to generate a complete dataset of all individuals and personas')
+
+    args = parser.parse_args()
+
+    if os.path.exists(args.path):
+        overwrite = input(args.path+' already exists. Do you want to overwrite it? (y/n)')
+        if overwrite:
+            shutil.rmtree(args.path)
+        else:
+            raise InterruptedError()
+    os.makedirs(args.path)
+
+    if args.loop_through_all:
+        if args.sampler.lower() == 'persona':
+            for p in persona_options:
+                main(p, os.path.join(args.path,p))
+        if args.sampler.lower() == 'individual':
+            for i in individual_options:
+                main(i, os.path.join(args.path,i))
+    else:
+        if args.sampler.lower() == 'persona':
+            main(random.choice(persona_options), args.path)
+        elif args.sampler.lower() == 'individual':
+            main(random.choice(individual_options), args.path)
+        else:
+            main(random.choice(persona_options + individual_options), args.path)

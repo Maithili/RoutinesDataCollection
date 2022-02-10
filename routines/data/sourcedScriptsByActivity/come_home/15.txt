@@ -1,4 +1,5 @@
 ##0-1
+[Walk] <outside>
 [Find] <mail>
 [Grab] <mail>
 [Walk] <dining_room>
@@ -7,6 +8,7 @@
 [Walk] <dining_room>
 [Find] <bench>
 [Putback] <mail> <bench>
+[Find] <shoes>
 [Putoff] <shoes>
 
 

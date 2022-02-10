@@ -45,6 +45,7 @@
 [Walk] <dining_room>
 [Find] <bench>
 [Putback] <mail> <bench>
+[Find] <shoes>
 [Putoff] <shoes>
 
 

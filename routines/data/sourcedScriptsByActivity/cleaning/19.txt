@@ -31,6 +31,7 @@
 [Find] <faucet_dining_room>
 [Switchon] <faucet_dining_room>
 [Rinse] <drinking_glass>
+[Switchoff] <faucet_bathroom>
 [Find] <sink_dining_room>
 [Putback] <drinking_glass> <sink_dining_room>
 
