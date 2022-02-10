@@ -2,8 +2,8 @@
 [Walk] <bathroom>
 [Find] <light_bathroom>
 [Switchon] <light_bathroom>
-[Find] <toilet>
 ## 1-10
+[Find] <toilet>
 [Sit] <toilet>
 [Standup]
 ## 2-3
