@@ -2,7 +2,7 @@ import random
 import json
 from math import floor
 import numpy as np
-import seaborn as sns
+# import seaborn as sns
 import matplotlib.pyplot as plt
 
 personas = []
@@ -38,7 +38,6 @@ activity_map = {
 }
 start_times = [6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
 
-
 class ScheduleDistributionSampler():
     def __init__(self, type):
         activity_histogram = {}
@@ -63,7 +62,7 @@ class ScheduleDistributionSampler():
         for i, activity in enumerate(self.activities):
             self.activity_threshold[i+1,:] = self.activity_threshold[i,:] + np.array(activity_histogram[activity])
         self.activity_threshold = self.activity_threshold[1:,:]
-        self.sampling_range = max(self.activity_threshold[:,-1])
+        self.sampling_range = max(self.activity_threshold[-1,:])
         self.removed_activities = []
 
     def __call__(self, t_mins, remove=False):
@@ -71,27 +70,28 @@ class ScheduleDistributionSampler():
         activity = None
         st = start_times.index(int(floor(t_mins/60)))
         for act, thresh in zip(self.activities, list(self.activity_threshold[:,st])):
-            if thresh < sample:
+            if thresh > sample:
                 activity = act
                 break
         if activity in self.removed_activities:
             return None
         else:
             if remove: self.remove(activity)
-            return activity
+        return activity
 
     def remove(self, activity):
         self.removed_activities.append(activity)
 
     def plot(self, filepath = None):
-        clrs = sns.color_palette("pastel") + sns.color_palette("dark") + sns.color_palette()
+        # clrs = sns.color_palette("pastel") + sns.color_palette("dark") + sns.color_palette()
         fig, ax = plt.subplots()
         fig.set_size_inches(27, 18.5)
         base = self.activity_threshold[0,:] * 0
         for i, activity in enumerate(self.activities):
             self.activity_threshold[i,:]
             d = self.activity_threshold[i,:] - base
-            ax.bar(start_times, d, label=activity, bottom=base, color=clrs[i])
+            # ax.bar(start_times, d, label=activity, bottom=base, color=clrs[i])
+            ax.bar(start_times, d, label=activity, bottom=base)
             base = self.activity_threshold[i,:]
         ax.set_xticks(start_times)
         ax.set_xticklabels([str(s)+':00' for s in start_times])
