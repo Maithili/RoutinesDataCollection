@@ -10,16 +10,20 @@
 [Walk] <bedroom>
 [Walk] <dresser>
 [Open] <dresser>
+[Walk] <clothes_underwear>
 [Find] <clothes_underwear>
 [Grab] <clothes_underwear>
 [PutOn] <clothes_underwear>
+[Walk] <clothes_pants>
 [Find] <clothes_pants>
 [Grab] <clothes_pants>
 [PutOn] <clothes_pants>
 ##2-4
+[Walk] <clothes_shirt>
 [Find] <clothes_shirt>
 [Grab] <clothes_shirt>
 [PutOn] <clothes_shirt>
+[Walk] <clothes_socks>
 [Find] <clothes_socks>
 [Grab] <clothes_socks>
 [PutOn] <clothes_socks>
@@ -28,6 +32,7 @@
 [Grab] <perfume>
 [PutObjBack] <perfume>
 [Walk] <dining_room>
+[Walk] <shoes>
 [Find] <shoes>
 [Grab] <shoes>
 [PutOn] <shoes>

@@ -1,6 +1,11 @@
 ## 1-2
 [Walk] <home_office>
 [Walk] <chair_home_office>
+[Walk] <pencil>
+[Find] <pencil>
+[Grab] <pencil>
+[Find] <desk_home_office>
+[Putback] <pencil> <desk_home_office>
 [Sit] <chair_home_office>
 [Find] <computer_home_office>
 [Switchon] <computer_home_office>

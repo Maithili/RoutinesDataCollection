@@ -31,7 +31,9 @@
 [Rinse] <drinking_glass>
 [Wash] <drinking_glass>
 [Walk] <cupboard>
-[Putback] <drinking_glass> <cupboard>
+[Open] <cupboard>
+[Putin] <drinking_glass> <cupboard>
+[Close] <cupboard>
 [Walk] <kitchentowel>
 [Grab] <kitchentowel>
 [Walk] <faucet_dining_room>

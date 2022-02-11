@@ -8,7 +8,9 @@
 
 ##2-3
 [Find] <drinking_glass>
+[Open] <cupboard>
 [Grab] <drinking_glass>
+[Close] <cupboard>
 [Walk] <kitchen_counter>
 [Putback] <drinking_glass> <kitchen_counter>
 [Walk] <water>

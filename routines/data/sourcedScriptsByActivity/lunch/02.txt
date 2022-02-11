@@ -59,8 +59,8 @@ Pour <food_peanut_butter> <food_bread>
 ##1-2
 [Walk] <food_bread>
 [Grab] <food_bread>
-[Walk] <cupboard>
-[Putin] <food_bread> <cupboard>
+[Walk] <kitchen_counter>
+[Putback] <food_bread> <kitchen_counter>
 ##1-2
 [Walk] <food_jam>
 [Grab] <food_jam>

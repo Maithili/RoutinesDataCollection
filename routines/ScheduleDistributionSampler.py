@@ -186,7 +186,9 @@ class ScheduleDistributionSampler():
             individual_histograms = json.load(f)
         if type.upper() in individual_histograms.keys():
             self.label = type.upper()
-            self.activity_histogram = np.array(individual_histograms[type.upper()])
+            hist = individual_histograms[type.upper()]
+            for activity, freq in hist.items():
+                self.activity_histogram[activity] = np.array(freq)
         elif type.lower() in personas.keys():
             persona_name = type.lower()
             self.label = persona_name
@@ -204,7 +206,7 @@ class ScheduleDistributionSampler():
         self.activities.remove("come_home")
         self.sampling_range = max(sum([np.array(self.activity_histogram[activity]) for activity in self.activities])) * idle_sampling_factor
         self.resample_after = resample_after
-        self.left_house = True
+        self.left_house = False
 
     def __call__(self, t_mins):
         st_idx = start_times.index(int(floor(t_mins/60)))
@@ -243,9 +245,9 @@ class ScheduleDistributionSampler():
         fig, ax = plt.subplots()
         fig.set_size_inches(27, 18.5)
         base = np.zeros_like(self.activity_histogram[self.activities[0]])
-        for activity in self.activities:         
-            ax.bar(start_times, self.activity_histogram[activity], label=activity, bottom=base)
-            base += self.activity_histogram[activity]
+        for activity, histogram in self.activity_histogram.items():         
+            ax.bar(start_times, histogram, label=activity, bottom=base)
+            base += histogram
         ax.set_xticks(start_times)
         ax.set_xticklabels([str(s)+':00' for s in start_times])
         ax.set_title(self.label)

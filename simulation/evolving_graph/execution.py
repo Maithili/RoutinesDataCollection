@@ -226,7 +226,7 @@ class SitExecutor(ActionExecutor):
         'chair': 2,
         'loveseat': 4,
         'sofa': 6,
-        'toilet': 1,
+        'toilet': 3,
         'pianobench': 3,
         'bench': 3
     }

@@ -76,6 +76,19 @@ edge_classes = ["INSIDE", "ON"]
 class SamplingFailure(Exception):
     pass
 
+def get_script_files_list():
+    files_list = {}
+    directory = os.path.join('data/sourcedScriptsByActivity')
+    for activity in os.listdir(directory):
+        available_files = os.listdir(os.path.join(directory,activity))
+        if not available_files:
+            continue
+        f = random.choice(available_files)
+        files_list[activity] = f
+    files_list["come_home"] = files_list["leave_home"]
+    files_list["leaving_home_and_coming_back"] = files_list["leave_home"]
+    return files_list
+
 # %% Activity
 
 class Activity():
@@ -95,7 +108,7 @@ class Activity():
             if verbose:
                 print(f'Picking script {script_file} for {name}')
             # headers, self.scripts, self.obj_use, _ = read_program(os.path.join(directory,script_file), init_graph.node_map)
-            durations, self.scripts, self.obj_start, self.obj_end = read_program(os.path.join(directory,script_file), init_graph.node_map)
+        durations, self.scripts, self.obj_start, self.obj_end = read_program(os.path.join(directory,script_file), init_graph.node_map)
         self.source = '_'.join([name, script_file[:-4]])
 
         self.durations = [(random.random() * (duration_max-duration_min) + duration_min) for duration_max,duration_min in durations]
@@ -191,11 +204,11 @@ class Schedule():
 #         self.activities = self.activities[:num_activities]
     
 class ScheduleFromHistogram(Schedule):
-    def __init__(self, sampler_name, type=None):
+    def __init__(self, sampler_name, script_files_list, type=None):
         sampler = ScheduleDistributionSampler(type=sampler_name, idle_sampling_factor=info['idle_sampling_factor'], resample_after=info['block_activity_for_hrs'])
         if info['breakfast_only']:
             t = sampler.sample_time_for('breakfast')
-            self.activities = [Activity('breakfast', time_start_mins=t, stack_actions=True)]
+            self.activities = [Activity('breakfast', time_start_mins=t, stack_actions=True, script_file=script_files_list['breakfast'])]
         else:
             # first_activity = "getting_out_of_bed"
             # first_activity_done = False
@@ -213,7 +226,7 @@ class ScheduleFromHistogram(Schedule):
                 #         continue
                 #     else:
                 #         first_activity_done = True
-                new_activity = Activity(activity_name, time_start_mins=t, stack_actions=True)
+                new_activity = Activity(activity_name, time_start_mins=t, stack_actions=True, script_file=script_files_list[activity_name])
                 self.activities.append(new_activity)
                 t = new_activity.get_end_time() + 1
                 # if activity_name == last_activity:
@@ -263,7 +276,7 @@ def get_graphs(all_actions, verbose=False):
     if not success:
         script_info = ''
         try:
-            for n in range(len(graph_list)-3, len(graph_list)+3):
+            for n in range(len(graph_list)-3, len(graph_list)+1):
                 script_info += ('\n## Executing '+all_actions[n]['name']+' from '+all_actions[n]['time_from_h']+' to '+all_actions[n]['time_to_h']+' using '+str(all_actions[n]['script']))
         except:
             pass
@@ -378,18 +391,20 @@ def get_used_objects(g1,g2):
     return utilized_object_ids
 
 # %% Make a routine
-def make_routine(routine_num, scripts_dir, routines_dir, sampler_name, script_use_file=None, verbose=False):
+def make_routine(routine_num, scripts_dir, routines_dir, sampler_name, script_files_list, logs_dir, script_use_file=None, verbose=False):
     while True:
         # day = np.random.choice(['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'])
         # day_number = day_num(day)
         # day_type = 'weekend' if day_number in info['weekend_days'] else 'weekday'
         try:
-            s = ScheduleFromHistogram(sampler_name)
+            s = ScheduleFromHistogram(sampler_name, script_files_list)
             actions = s.get_combined_script()
             graphs, times, obj_in_use, script_string, imp_obj = get_graphs(actions)
         except SamplingFailure as sf:
             if verbose:
                 print (sf)
+            with open(os.path.join(logs_dir,'{:03d}'.format(routine_num)+'.txt'), 'a') as f:
+                f.write(str(sf)+'\n\n')
             continue
         script_file = os.path.join(scripts_dir,'{:03d}'.format(routine_num)+'.txt')
         if script_use_file is not None:
@@ -415,11 +430,13 @@ def make_routine(routine_num, scripts_dir, routines_dir, sampler_name, script_us
         return routine_out
 
 
-def main(sampler_name, output_directory):
+def main(sampler_name, output_directory, verbose, script_files_list):
     scripts_train_dir = os.path.join(output_directory,'scripts_train')
     scripts_test_dir = os.path.join(output_directory,'scripts_test')
     routines_raw_train_dir = os.path.join(output_directory,'raw_routines_train')
     routines_raw_test_dir = os.path.join(output_directory,'raw_routines_test')
+    logs_dir_train = os.path.join(output_directory,'logs_train')
+    logs_dir_test = os.path.join(output_directory,'logs_test')
     
     global info
     
@@ -428,17 +445,22 @@ def main(sampler_name, output_directory):
     os.makedirs(scripts_test_dir)
     os.makedirs(routines_raw_train_dir)
     os.makedirs(routines_raw_test_dir)
+    os.makedirs(logs_dir_train)
+    os.makedirs(logs_dir_test)
+    
+    with open(os.path.join(output_directory,'scripts_available_to_use.txt'), 'w') as f:
+        script_usage = json.dump(script_files_list, f)
 
     sampler = ScheduleDistributionSampler(type=sampler_name)
     sampler.plot(os.path.join(output_directory,'schedule_distribution.jpg'))
 
     pool = multiprocessing.Pool()
     for routine_num in range(info['num_train_routines']):
-        make_routine(routine_num, scripts_train_dir, routines_raw_train_dir, sampler_name, os.path.join(output_directory,'script_usage.txt'), False)
-        # pool.apply_async(make_routine, args = (routine_num, scripts_train_dir, routines_raw_train_dir, sampler_name, os.path.join(output_directory,'script_usage.txt'), False))
+        make_routine(routine_num, scripts_train_dir, routines_raw_train_dir, sampler_name, script_files_list, logs_dir_train, os.path.join(output_directory,'script_usage.txt'), verbose)
+        # pool.apply_async(make_routine, args = (routine_num, scripts_train_dir, routines_raw_train_dir, sampler_name, script_files_list, os.path.join(output_directory,'script_usage.txt'), verbose))
     for routine_num in range(info['num_test_routines']):
-        make_routine(routine_num, scripts_test_dir, routines_raw_test_dir, sampler_name, os.path.join(output_directory,'script_usage.txt'), False)
-        # pool.apply_async(make_routine, args=(routine_num, scripts_test_dir, routines_raw_test_dir, sampler_name, os.path.join(output_directory,'script_usage.txt'), False))
+        make_routine(routine_num, scripts_test_dir, routines_raw_test_dir, sampler_name, script_files_list, logs_dir_test, os.path.join(output_directory,'script_usage.txt'), verbose)
+        # pool.apply_async(make_routine, args=(routine_num, scripts_test_dir, routines_raw_test_dir, sampler_name, script_files_list, os.path.join(output_directory,'script_usage.txt'), verbose))
     pool.close()
     pool.join()
 
@@ -550,7 +572,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run model on routines.')
     parser.add_argument('--path', type=str, default='data/generated_routine', help='Directory to output data in')
     parser.add_argument('--sampler', type=str, help='Name of schedule sampler to use. This can be \'persona\', \'individual\' or an individual ID or persona name')
-    parser.add_argument('--loop_through_all', action='store_true', help='Set this to generate a complete dataset of all individuals and personas')
+    parser.add_argument('--loop_through_all', action='store_true', default=False, help='Set this to generate a complete dataset of all individuals and personas')
+    parser.add_argument('--verbose', action='store_true', default=False, help='Set this to generate a complete dataset of all individuals and personas')
 
     args = parser.parse_args()
 
@@ -562,17 +585,19 @@ if __name__ == "__main__":
             raise InterruptedError()
     os.makedirs(args.path)
 
+    script_files = get_script_files_list()
+
     if args.loop_through_all:
         if args.sampler.lower() == 'persona':
             for p in persona_options:
-                main(p, os.path.join(args.path,p))
+                main(p, os.path.join(args.path,p), args.verbose, script_files)
         if args.sampler.lower() == 'individual':
             for i in individual_options:
-                main(i, os.path.join(args.path,i))
+                main(i, os.path.join(args.path,i), args.verbose, script_files)
     else:
         if args.sampler.lower() == 'persona':
-            main(random.choice(persona_options), args.path)
+            main(random.choice(persona_options), args.path, args.verbose, script_files)
         elif args.sampler.lower() == 'individual':
-            main(random.choice(individual_options), args.path)
+            main(random.choice(individual_options), args.path, args.verbose, script_files)
         else:
-            main(random.choice(persona_options + individual_options), args.path)
+            main(random.choice(persona_options + individual_options), args.path, args.verbose, script_files)
