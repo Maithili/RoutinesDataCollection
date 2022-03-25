@@ -19,7 +19,12 @@
 [Walk] <faucet_dining_room>
 
 ## 1-2
+[Walk] <cupboard>
+[Find] <cupboard>
+[Open] <cupboard>
 [Find] <drinking_glass>
+[Grab] <drinking_glass>
+[Close] <cupboard>
 [Scrub] <drinking_glass>
 [Wipe] <drinking_glass>
 

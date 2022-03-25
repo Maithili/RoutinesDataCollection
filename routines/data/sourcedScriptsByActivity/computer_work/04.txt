@@ -52,8 +52,10 @@
 ## 3-5
 [find] <drinking_glass>
 [grab] <drinking_glass>
-[find] <kitchen_counter>
-[PutBack] <drinking_glass><kitchen_counter>
+[find] <cupboard>
+[open] <cupboard>
+[PutBack] <drinking_glass><cupboard>
+[close] <cupboard>
 ## 3-5
 [find] <bag>
 [grab] <bag>

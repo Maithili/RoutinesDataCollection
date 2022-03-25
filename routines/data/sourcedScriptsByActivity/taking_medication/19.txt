@@ -11,12 +11,9 @@
 [Close] <cupboard>
 
 ## 2-3
-[Find] <faucet_dining_room>
 [Walk] <faucet_dining_room>
+[Find] <faucet_dining_room>
 [Switchon] <faucet_dining_room>
-[Find] <water>
-[Grab] <water>
-[Pour] <water> <water_glass>
 [Switchoff] <faucet_dining_room>
 
 ## 2-3
@@ -34,12 +31,13 @@
 
 ## 1-2
 [Find] <painkillers>
-[Grab] <painkillers>
 [Open] <painkillers>
+[Grab] <painkillers>
 [Find] <water_glass>
 [Pour] <painkillers> <water_glass>
 [Find] <bathroom_counter>
 [Putback] <painkillers> <bathroom_counter>
+[Close] <painkillers>
 -<painkillers>
 
 ## 1-2

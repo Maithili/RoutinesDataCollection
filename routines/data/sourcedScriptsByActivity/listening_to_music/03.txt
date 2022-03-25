@@ -5,3 +5,5 @@
 [Switchon] <radio>
 [Walk] <dining_room>
 [Putback] <radio><dining_room>
+## 15 - 20
+[Switchoff] <radio>

@@ -24,8 +24,9 @@ from evolving_graph.environment import EnvironmentGraph
 from GraphReader import GraphReader, init_graph_file, scene_num
 from ProgramExecutor import read_program
 from ScheduleDistributionSampler import ScheduleDistributionSampler, activity_map, persona_options, individual_options
+from postprocess_viz import dump_visuals
 
-random.seed(23424)
+# random.seed(23424)
 
 def time_mins(mins, hrs, day=0):
     return (((day)*24)+hrs)*60+mins
@@ -60,10 +61,10 @@ info['only_used_objects'] = True
 info['graphs_dt_apart'] = False
 
 
-info['min_activities'] = 4
+info['min_activities'] = 1
 info['schedule_sampler_filter_num'] = 0 
 info['idle_sampling_factor'] = 1.0
-info['block_activity_for_hrs'] = 3
+info['block_activity_for_hrs'] = 5
 
 info['breakfast_only'] = False
 info['single_script_only'] = False
@@ -313,8 +314,8 @@ def get_graphs(all_actions, verbose=False):
             # obj_in_use.append(list(combined_obj_in_use))
             # combined_obj_in_use = set()
         important_objects.update(get_used_objects(graphs[-2],graphs[-1]))
+        script_string += print_graph_difference(graphs[-2], graphs[-1]) + '\n'
         if verbose:
-            print_graph_difference(graphs[-2],graphs[-1])
             print('Currently using : ',current_objects)
             input('Press something...')
 
@@ -355,20 +356,24 @@ def print_graph_difference(g1,g2):
     nodes_removed = [n for n in g1['nodes'] if n['id'] not in [n2['id'] for n2 in g2['nodes']]]
     nodes_added = [n for n in g2['nodes'] if n['id'] not in [n2['id'] for n2 in g1['nodes']]]
 
+    info_str = ''
+
     for n in nodes_removed:
-        print ('Removed node : ',n)
+        info_str += ('\nRemoved node : '+str(n))
     for n in nodes_added:
-        print ('Added node   : ',n)
+        info_str += ('\nAdded node   : '+str(n))
     for e in edges_removed:
         c1 = class_from_id(g1,e['from_id'])
         c2 = class_from_id(g1,e['to_id'])
         if c1 != 'character' and c2 != 'character' and e['relation_type'] in edge_classes:
-            print ('Removed edge : ',c1,e['relation_type'],c2)
+            info_str += ('\nRemoved : '+c1+' '+e['relation_type']+' '+c2)
     for e in edges_added:
         c1 = class_from_id(g2,e['from_id'])
         c2 = class_from_id(g2,e['to_id'])
         if c1 != 'character' and c2 != 'character' and e['relation_type'] in edge_classes:
-            print ('Added edge   : ',c1,e['relation_type'],c2)
+            info_str += ('\nAdded   : '+c1+' '+e['relation_type']+' '+c2)
+
+    return info_str
 
 def get_used_objects(g1,g2):
     utilized_object_ids = []
@@ -583,11 +588,11 @@ if __name__ == "__main__":
             shutil.rmtree(args.path)
         else:
             raise InterruptedError()
-    os.makedirs(args.path)
 
     script_files = get_script_files_list()
 
     if args.loop_through_all:
+        os.makedirs(args.path)
         if args.sampler.lower() == 'persona':
             for p in persona_options:
                 main(p, os.path.join(args.path,p), args.verbose, script_files)
@@ -601,3 +606,5 @@ if __name__ == "__main__":
             main(random.choice(individual_options), args.path, args.verbose, script_files)
         else:
             main(random.choice(persona_options + individual_options), args.path, args.verbose, script_files)
+    
+    dump_visuals(args.path)

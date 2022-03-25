@@ -14,9 +14,11 @@
 [Switchon] <light_bedroom>
 [Find] <dresser>
 [Open] <dresser>
+[Walk] <clothes_jacket>
 [Find] <clothes_jacket>
 [Grab] <clothes_jacket>
 [Puton] <clothes_jacket>
+[Walk] <dresser>
 [Close] <dresser>
 [Find] <bag>
 [Grab] <bag>

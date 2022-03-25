@@ -56,8 +56,10 @@
 [Grab] <drinking_glass>
 [Walk] <sink_dining_room>
 [Wash] <drinking_glass>
-[Walk] <kitchen_counter>
-[Putback] <drinking_glass> <kitchen_counter>
+[find] <cupboard>
+[open] <cupboard>
+[PutBack] <drinking_glass><cupboard>
+[close] <cupboard>
 ## 1-2
 [Walk] <table_dining_room>
 [Grab] <cloth_napkin>

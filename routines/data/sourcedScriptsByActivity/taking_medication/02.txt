@@ -7,17 +7,18 @@
 [Putback] <painkillers> <kitchen_counter>
 
 ##2-3
-[Find] <drinking_glass>
+[Walk] <cupboard>
 [Open] <cupboard>
+[Find] <drinking_glass>
 [Grab] <drinking_glass>
+[Walk] <cupboard>
 [Close] <cupboard>
 [Walk] <kitchen_counter>
-[Putback] <drinking_glass> <kitchen_counter>
-[Walk] <water>
-[Find] <water>
-[Grab] <water>
+[Walk] <faucet_dining_room>
+[Switchon] <faucet_dining_room>
+[Switchoff] <faucet_dining_room>
 [Walk] <kitchen_counter>
-[Pour] <water> <drinking_glass>
+[Putback] <drinking_glass> <kitchen_counter>
 
 ##2-3
 [Eat] <painkillers>

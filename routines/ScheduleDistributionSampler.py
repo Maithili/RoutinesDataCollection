@@ -2,9 +2,11 @@ from argparse import ArgumentError
 import random
 import json
 from math import floor
+from tokenize import cookie_re
 import numpy as np
 # import seaborn as sns
 import matplotlib.pyplot as plt
+from postprocess_viz import color_map
 
 personas = {}
 
@@ -141,6 +143,31 @@ personas['senior'] = {
     'watching_tv' : 'evening',
 }
 
+# basic 
+personas['basic'] = {
+    'leave_home' : 'never',
+    'come_home' : 'never',
+    'playing_music' : 'not_at_all',
+    'getting_dressed' : 'not_at_all',
+    'cleaning' : 'not_at_all',
+    'breakfast' : 'skips_breakfast',
+    'socializing' : 'not_at_all',
+    'lunch' : 'skips_lunch',
+    'listening_to_music' : 'not_at_all',
+    'taking_medication' : 'never',
+    'take_out_trash' : 'not_at_all',
+    'kitchen_cleaning' : 'not_at_all',
+    'dinner' : 'on_time',
+    'wash_dishes' : 'not_at_all',
+    'brushing_teeth' : 'morning_only',
+    'laundry' : 'not_at_all',
+    'reading' : 'not_at_all',
+    'showering' : 'morning',
+    'vaccuum_cleaning' : 'not_at_all',
+    'watching_tv' : 'not_at_all',
+}
+
+
 persona_options = list(personas.keys())
 with open('data/personaBasedSchedules/individual_histograms.json') as f:
     individual_histograms = json.load(f)
@@ -197,8 +224,8 @@ class ScheduleDistributionSampler():
                 try:
                     self.activity_histogram[activity] = np.array(trait_histograms[activity][persona[activity]])
                 except Exception as e:
-                    print(activity, persona_name)
-                    raise e
+                    print(activity, ' does not exist in the traits for ', persona_name)
+                    # raise e
         else:
             raise ArgumentError(f'Unknown value {type} for Schedule Sampler')
         
@@ -246,7 +273,7 @@ class ScheduleDistributionSampler():
         fig.set_size_inches(27, 18.5)
         base = np.zeros_like(self.activity_histogram[self.activities[0]])
         for activity, histogram in self.activity_histogram.items():         
-            ax.bar(start_times, histogram, label=activity, bottom=base)
+            ax.bar(start_times, histogram, label=activity, bottom=base, color = color_map[activity])
             base += histogram
         ax.set_xticks(start_times)
         ax.set_xticklabels([str(s)+':00' for s in start_times])

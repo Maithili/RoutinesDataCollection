@@ -14,11 +14,7 @@
 [Switchoff] <faucet_bathroom>
 [Find] <napkin>
 [Grab] <napkin>
+[Find] <bathroom_counter>
+[Putback] <napkin> <bathroom_counter>
 [Find] <light_bathroom>
 [Switchoff] <light_bathroom>
-## 0-1
-[Walk] <dining_room>
-[Find] <trashcan>
-[Open] <trashcan>
-[Putin] <napkin> <trashcan>
-[Close] <trashcan>

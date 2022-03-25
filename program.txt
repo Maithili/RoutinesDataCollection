@@ -1,0 +1,32 @@
+
+## breakfast_Kotoe0(06:00 - 07:04)  from 06:00 to 06:04
+[WALK] <dining_room> (41)
+[WALK] <cupboard> (117)
+[OPEN] <cupboard> (117)
+[FIND] <ground_coffee> (1118)
+[GRAB] <ground_coffee> (1118)
+[WALK] <kitchen_counter> (119)
+[FIND] <coffe_maker> (130)
+[OPEN] <coffe_maker> (130)
+[FIND] <coffee_filter> (1048)
+[GRAB] <coffee_filter> (1048) 
+[FIND] <coffe_maker> (130) 
+[PUTIN] <coffee_filter> (1048) <coffe_maker> (130) 
+[POUR] <ground_coffee> (1118) <coffee_filter> (1048) 
+[FIND] <kitchen_counter> (119) 
+
+##
+[PUTBACK] <ground_coffee> (1118) <kitchen_counter> (119) 
+[FIND] <mug> (1146) 
+[GRAB] <mug> (1146) 
+[FIND] <coffe_maker> (130) 
+[PUTIN] <mug> (1146) <coffe_maker> (130) 
+[CLOSE] <coffe_maker> (130) 
+[SWITCHON] <coffe_maker> (130) 
+
+## breakfast_Kotoe0(06:00 - 07:04)  from 06:04 to 06:08
+[FIND] <ground_coffee> (1118)
+[GRAB] <ground_coffee> (1118)
+[WALK] <cupboard> (117)
+[PUTIN] <ground_coffee> (1118) <cupboard> (117)
+[CLOSE] <cupboard> (117)
